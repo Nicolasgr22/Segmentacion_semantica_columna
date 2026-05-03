@@ -1,0 +1,479 @@
+openapi: "3.0.3"
+
+info:
+  title: VertebraAI API
+  description: |
+    Servicio de segmentación automática de columna vertebral en radiografías mediante
+    el modelo **SegFormer-B2** (`nvidia/mit-b2`) fine-tuneado sobre el dataset MaIA Scoliosis
+    con 14,382 estudios anotados por radiólogos certificados.
+
+    ## Clases segmentadas (23 clases)
+    | ID | Vértebra | Región |
+    |----|----------|--------|
+    | 0  | background | — |
+    | 1–5 | C7, C6, C5, C4, C3 | Cervical |
+    | 6–17 | T1–T12 | Torácica |
+    | 18–22 | L1–L5 | Lumbar |
+
+    > **Aviso clínico:** Esta herramienta es un apoyo diagnóstico. Toda decisión clínica
+    > debe ser revisada por un radiólogo o especialista cualificado.
+  version: "1.0.0"
+  contact:
+    name: MaIA — Proyecto de Grado — Universidad de los Andes
+    email: anferiro@gmail.com
+
+servers:
+  - url: http://localhost:8000
+    description: Desarrollo local
+  - url: https://vertebraai.maialab.virtual.uniandes.edu.co
+    description: Producción (VM institucional)
+
+tags:
+  - name: xrays
+    description: Radiografías de columna vertebral y sus análisis de segmentación
+  - name: health
+    description: Estado del servicio y del modelo
+
+paths:
+  /api/vertebraai/xrays:
+    post:
+      operationId: createAnalysis
+      summary: Crear análisis de radiografía de columna vertebral
+      description: |
+        Recibe una imagen PNG de radiografía, aplica preprocesamiento
+        (CLAHE clipLimit=2.0 + letterbox 512×512) y retorna la máscara de
+        segmentación coloreada con métricas por vértebra.
+
+        **Flujo interno:**
+        1. Validación PNG (formato + resolución mínima 512×512)
+        2. CLAHE para mejorar contraste
+        3. Letterbox resize a 512×512 preservando aspecto
+        4. Inferencia SegFormer-B2 → logits (B, 23, H/4, W/4)
+        5. Upsample bilinear + argmax → máscara (512, 512)
+        6. Generación de máscara coloreada por región
+        7. Cálculo de métricas por vértebra y región
+      tags: [xrays]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: |
+                    Imagen PNG de radiografía de columna vertebral.
+                    Resolución mínima: 512×512 px. Tamaño máximo: 50 MB.
+            encoding:
+              file:
+                contentType: image/png
+      responses:
+        "201":
+          description: Análisis creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeResponse"
+              example:
+                study_id: "550e8400-e29b-41d4-a716-446655440000"
+                timestamp: "2026-05-01T14:32:00.000Z"
+                mask:
+                  data: "iVBORw0KGgoAAAANSUhEUgAA..."
+                  format: "PNG"
+                  dimensions:
+                    width: 512
+                    height: 512
+                metrics:
+                  detected_count: 20
+                  confidence: 0.943
+                  by_region:
+                    cervical:
+                      detected_count: 5
+                      expected_count: 5
+                      mean_confidence: 0.962
+                      mean_dice: 0.933
+                    thoracic:
+                      detected_count: 12
+                      expected_count: 12
+                      mean_confidence: 0.948
+                      mean_dice: 0.920
+                    lumbar:
+                      detected_count: 3
+                      expected_count: 5
+                      mean_confidence: 0.921
+                      mean_dice: 0.893
+                  model_metrics:
+                    dice: 0.915
+                    iou: 0.844
+                    latency_ms: 3210.5
+                    model_version: "nvidia/mit-b2"
+                vertebrae:
+                  - id: "C7"
+                    label: "C7"
+                    region: "cervical"
+                    detected: true
+                    confidence: 0.972
+                    pixel_count: 842
+                    bounding_box:
+                      x_min: 230
+                      y_min: 45
+                      x_max: 270
+                      y_max: 68
+                    centroid:
+                      x: 250.3
+                      y: 56.8
+                processing:
+                  steps:
+                    - "Decodificación PNG"
+                    - "CLAHE (clipLimit=2.0)"
+                    - "Letterbox 512×512"
+                    - "Inferencia SegFormer-B2"
+                    - "Upsample logits 4×"
+                    - "Argmax → máscara"
+                    - "Cálculo métricas por vértebra"
+                    - "Generación máscara coloreada"
+                  total_time_ms: 3410.2
+        "400":
+          description: Imagen inválida (no es PNG o resolución insuficiente)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "InvalidImage"
+                detail: "Resolución insuficiente: 256×256 px. Mínimo requerido: 512×512 px"
+                timestamp: "2026-05-01T14:32:00.000Z"
+        "413":
+          description: Imagen supera el límite de tamaño (50 MB)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Error de validación del request (campo faltante o tipo incorrecto)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor durante la inferencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: Timeout en la inferencia del modelo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/vertebraai/health:
+    get:
+      operationId: healthCheck
+      summary: Estado del servicio y del modelo
+      description: Retorna el estado actual del servicio, versión del modelo y tiempo de actividad.
+      tags: [health]
+      responses:
+        "200":
+          description: Estado del servicio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: "ok"
+                model_version: "nvidia/mit-b2"
+                model_loaded: true
+                uptime_s: 3600.5
+
+  /api/vertebraai/xrays/{xray_id}/exports/{format}:
+    get:
+      operationId: getAnalysisExport
+      summary: Exportar resultado de un análisis previo
+      description: |
+        Genera y descarga el resultado de un análisis ya creado en el formato solicitado.
+
+        - `png`: imagen original redimensionada a 512×512
+        - `mask`: máscara de segmentación coloreada por región
+        - `overlay`: imagen original con máscara superpuesta (50% transparencia)
+        - `report`: reporte JSON completo con todas las métricas y vértebras
+      tags: [xrays]
+      parameters:
+        - name: xray_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID de la radiografía retornado por POST /api/vertebraai/xrays
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [png, mask, overlay, report]
+          description: Formato de exportación
+      responses:
+        "200":
+          description: Exportación generada exitosamente
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Análisis no encontrado (puede haberse expirado del caché en memoria)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "StudyNotFound"
+                detail: "Radiografía '550e8400-e29b-41d4-a716-446655440000' no encontrada"
+                timestamp: "2026-05-01T14:35:00.000Z"
+
+components:
+  schemas:
+    BoundingBox:
+      type: object
+      required: [x_min, y_min, x_max, y_max]
+      properties:
+        x_min:
+          type: integer
+          minimum: 0
+          description: Coordenada X izquierda (píxeles)
+        y_min:
+          type: integer
+          minimum: 0
+          description: Coordenada Y superior (píxeles)
+        x_max:
+          type: integer
+          minimum: 0
+          description: Coordenada X derecha (píxeles)
+        y_max:
+          type: integer
+          minimum: 0
+          description: Coordenada Y inferior (píxeles)
+
+    Centroid:
+      type: object
+      required: [x, y]
+      properties:
+        x:
+          type: number
+          format: float
+          description: Coordenada X del centroide (píxeles)
+        y:
+          type: number
+          format: float
+          description: Coordenada Y del centroide (píxeles)
+
+    VertebraResponse:
+      type: object
+      required: [id, label, region, detected, confidence, pixel_count]
+      properties:
+        id:
+          type: string
+          example: "T6"
+          description: Identificador de la vértebra
+        label:
+          type: string
+          example: "T6"
+          description: Etiqueta legible de la vértebra
+        region:
+          type: string
+          enum: [cervical, thoracic, lumbar]
+          description: Región anatómica
+        detected:
+          type: boolean
+          description: Si la vértebra fue detectada en la imagen
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confianza media sobre los píxeles segmentados
+        pixel_count:
+          type: integer
+          minimum: 0
+          description: Número de píxeles asignados a esta vértebra
+        bounding_box:
+          $ref: "#/components/schemas/BoundingBox"
+          nullable: true
+        centroid:
+          $ref: "#/components/schemas/Centroid"
+          nullable: true
+
+    RegionMetrics:
+      type: object
+      required: [detected_count, expected_count, mean_confidence, mean_dice]
+      properties:
+        detected_count:
+          type: integer
+          description: Vértebras detectadas en esta región
+        expected_count:
+          type: integer
+          description: Vértebras esperadas anatómicamente (cervical=5, thoracic=12, lumbar=5)
+        mean_confidence:
+          type: number
+          format: float
+          description: Confianza media en la región
+        mean_dice:
+          type: number
+          format: float
+          description: Dice score medio en la región
+
+    ModelMetrics:
+      type: object
+      required: [dice, iou, latency_ms, model_version]
+      properties:
+        dice:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        iou:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        latency_ms:
+          type: number
+          format: float
+          description: Tiempo de inferencia en milisegundos
+        model_version:
+          type: string
+          description: Identificador del checkpoint del modelo
+
+    AnalysisMetrics:
+      type: object
+      required: [detected_count, confidence, by_region, model_metrics]
+      properties:
+        detected_count:
+          type: integer
+          minimum: 0
+          maximum: 22
+          description: Total de vértebras detectadas
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confianza global del análisis
+        by_region:
+          type: object
+          properties:
+            cervical:
+              $ref: "#/components/schemas/RegionMetrics"
+            thoracic:
+              $ref: "#/components/schemas/RegionMetrics"
+            lumbar:
+              $ref: "#/components/schemas/RegionMetrics"
+        model_metrics:
+          $ref: "#/components/schemas/ModelMetrics"
+
+    MaskData:
+      type: object
+      required: [data, format, dimensions]
+      properties:
+        data:
+          type: string
+          description: Imagen PNG de la máscara de segmentación codificada en Base64
+          example: "iVBORw0KGgoAAAANSUhEUgAA..."
+        format:
+          type: string
+          enum: [PNG]
+        dimensions:
+          type: object
+          required: [width, height]
+          properties:
+            width:
+              type: integer
+              example: 512
+            height:
+              type: integer
+              example: 512
+
+    ProcessingInfo:
+      type: object
+      required: [steps, total_time_ms]
+      properties:
+        steps:
+          type: array
+          items:
+            type: string
+          description: Pasos de procesamiento ejecutados en orden
+        total_time_ms:
+          type: number
+          format: float
+          description: Tiempo total de procesamiento en milisegundos
+
+    AnalyzeResponse:
+      type: object
+      required: [study_id, timestamp, mask, metrics, vertebrae, processing]
+      properties:
+        study_id:
+          type: string
+          format: uuid
+          description: Identificador único del estudio para exportación posterior
+        timestamp:
+          type: string
+          format: date-time
+          description: Fecha y hora del análisis (ISO 8601 UTC)
+        mask:
+          $ref: "#/components/schemas/MaskData"
+        metrics:
+          $ref: "#/components/schemas/AnalysisMetrics"
+        vertebrae:
+          type: array
+          items:
+            $ref: "#/components/schemas/VertebraResponse"
+          minItems: 22
+          maxItems: 22
+          description: |
+            Siempre retorna exactamente 22 vértebras (C3-C7, T1-T12, L1-L5).
+            `detected=false` indica que la vértebra no fue identificada en la imagen.
+        processing:
+          $ref: "#/components/schemas/ProcessingInfo"
+
+    HealthResponse:
+      type: object
+      required: [status, model_version, model_loaded, uptime_s]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: "`ok` si el modelo está cargado, `degraded` si no"
+        model_version:
+          type: string
+          description: Versión o ruta del checkpoint del modelo
+        model_loaded:
+          type: boolean
+        uptime_s:
+          type: number
+          format: float
+          description: Tiempo de actividad del servicio en segundos
+
+    ErrorResponse:
+      type: object
+      required: [error, detail, timestamp]
+      properties:
+        error:
+          type: string
+          description: Tipo de error
+          example: "InvalidImage"
+        detail:
+          type: string
+          description: Descripción detallada del error
+          example: "Solo se aceptan imágenes en formato PNG"
+        timestamp:
+          type: string
+          format: date-time

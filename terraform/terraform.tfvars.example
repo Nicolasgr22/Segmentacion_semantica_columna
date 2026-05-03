@@ -1,0 +1,10 @@
+# Copia este archivo a terraform.tfvars y ajusta si es necesario.
+# Los valores por defecto en variables.tf ya están configurados para este proyecto.
+
+aws_region           = "us-east-1"
+aws_account_id       = "673857242697"
+state_bucket_name    = "anferiro-maia-proyecto-final-state"
+frontend_bucket_name = "anferiro-maia-proyecto-final-frontend"
+iam_user_name        = "maia-proyecto-user"
+iam_role_name        = "maia-proyecto-grado"
+project_name         = "maia-proyecto-final"
