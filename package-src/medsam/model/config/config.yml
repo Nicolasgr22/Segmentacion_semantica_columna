@@ -1,0 +1,55 @@
+model:
+  checkpoint: "vit_b"                  # SAM registry key
+  img_size: 1024                        # SAM input resolution
+
+training:
+  seed: 42
+  num_epochs: 20
+  batch_size: 2
+  num_workers: 0
+  box_pad: 10                           # bbox prompt padding in pixels
+  num_pos_points: 3                     # positive SAM point prompts per image
+  neg_offset: 15                        # negative point offset from bbox edge
+
+  optimizer:
+    decoder_lr: 1e-4
+    encoder_last_block_lr: 1e-5
+    weight_decay: 1e-4
+
+  scheduler:
+    mode: "max"
+    factor: 0.5
+    patience: 3
+    threshold: 1e-3
+    min_lr: 1e-6
+
+  early_stopping:
+    patience: 5
+    min_delta: 0.001
+
+  checkpoint_name: "medsam_lastblock_unfrozen.pth"
+
+data:
+  image_size: 1024
+  min_resolution: 256                   # mínimo ancho/alto aceptado
+
+paths:
+  # Raíz del paquete → package-src/medsam/model/
+  dataset_root:    "recursos/Scoliosis_Dataset"
+  splits_csv:      "recursos/dataset_procesado/splits.csv"
+  sam_checkpoint:  "recursos/models/sam_vit_b_01ec64.pth"
+  save_dir:        "recursos/medsam_checkpoints"
+
+  # Subcarpetas del dataset (relativas a dataset_root)
+  normal:          "Normal"
+  scoliosis:       "Scoliosis"
+  mask_id:         "LabelMultiClass_ID_PNG"
+  mask_binary:     "LabelBinaryJPG"
+  metrics_json:    "RadiographMetrics/metrics_json"
+  labels_dict:     "labels_dictionary.json"
+
+mlflow:
+  run_name: "exp_final_lastblock_unfrozen"
+  params:
+    model: "MedSAM-ViT-B"
+    estrategia: "lastblock_encoder_unfrozen"
