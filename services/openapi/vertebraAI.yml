@@ -67,6 +67,8 @@ paths:
                   description: |
                     Imagen PNG de radiografía de columna vertebral.
                     Resolución mínima: 512×512 px. Tamaño máximo: 50 MB.
+                model:
+                  $ref: "#/components/schemas/ModelName"
             encoding:
               file:
                 contentType: image/png
@@ -242,6 +244,15 @@ paths:
 
 components:
   schemas:
+    ModelName:
+      type: string
+      enum: [medsam, segformer-b2]
+      default: medsam
+      description: |
+        Modelo de segmentación a utilizar:
+        - `medsam`: MedSAM ViT-B fine-tuned, segmentación binaria de columna vertebral. **Disponible.**
+        - `segformer-b2`: SegFormer-B2 (`nvidia/mit-b2`), segmentación semántica multi-clase (23 clases). **Próximamente.**
+
     BoundingBox:
       type: object
       required: [x_min, y_min, x_max, y_max]

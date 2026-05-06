@@ -1,0 +1,58 @@
+direction: right
+
+classes: {
+  person: {
+    shape: person
+    style: {
+      fill: "#D4E6F1"
+      stroke: "#2980B9"
+      font-size: 13
+      bold: true
+    }
+  }
+  system: {
+    style: {
+      fill: "#D5F5E3"
+      stroke: "#27AE60"
+      font-size: 13
+      bold: true
+      stroke-width: 3
+    }
+  }
+  external: {
+    style: {
+      fill: "#F2F3F4"
+      stroke: "#95A5A6"
+      font-size: 13
+    }
+  }
+}
+
+radiologo: "Radiólogo / Médico" {
+  class: person
+  shape: person
+}
+
+frontend: "Aplicación Frontend\n(Vue.js / Vitest Mock)" {
+  class: external
+}
+
+vertebraai: "VertebraAI API\n\nServicio REST de segmentación\nautomática de columna vertebral.\nDetecta y segmenta 22 vértebras\n(C3–C7, T1–T12, L1–L5)." {
+  class: system
+}
+
+huggingface: "Hugging Face Hub\nnvidia/mit-b2" {
+  class: external
+}
+
+medsam_pkg: "model-pkg\n(MedSAM .whl)" {
+  class: external
+}
+
+radiologo -> frontend: "Sube radiografía PNG\nSelecciona modelo"
+frontend -> vertebraai: "POST /api/vertebraai/xrays\n(multipart: file + model)"
+vertebraai -> frontend: "201 AnalyzeResponse\n(máscara Base64 + métricas + vértebras)"
+frontend -> vertebraai: "GET /xrays/{id}/exports/{format}"
+vertebraai -> frontend: "PNG / overlay / reporte JSON"
+vertebraai -> huggingface: "Descarga pesos SegFormer-B2\n(al inicio del servicio)"
+vertebraai -> medsam_pkg: "Importa MedSAMPredictor\n(cuando está instalado)"

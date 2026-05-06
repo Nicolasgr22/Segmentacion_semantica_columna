@@ -8,12 +8,13 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    model_checkpoint: str = "nvidia/mit-b2"
-    model_local_path: str = ""
     model_device: str = "cpu"
     model_input_size: int = 512
-    n_classes: int = 23
 
+    # MedSAM — segmentación binaria de columna vertebral
+    medsam_sam_checkpoint: str = "model-pkg/sam_vit_b_01ec64.pth"
+    medsam_finetuned_checkpoint: str = "model-pkg/medsam_lastblock_unfrozen.pth"
+    
     max_upload_mb: int = 50
     inference_timeout_s: int = 60
 

@@ -1,13 +1,15 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.api.v1.schemas.requests import ModelName
 from app.api.v1.schemas.responses import AnalyzeResponse, ErrorResponse, analysis_to_response
 from app.config import settings
+from app.core.domain.ports.model_port import ModelPort
+from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase, InvalidImageError
-from app.dependencies import get_analyze_use_case
+from app.dependencies import get_model_registry, get_storage_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/xrays", tags=["xrays"])
     response_model=AnalyzeResponse,
     status_code=201,
     responses={
-        400: {"model": ErrorResponse, "description": "Imagen inválida"},
+        400: {"model": ErrorResponse, "description": "Imagen inválida o modelo no disponible"},
         413: {"model": ErrorResponse, "description": "Imagen demasiado grande"},
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
         504: {"model": ErrorResponse, "description": "Timeout en inferencia"},
@@ -33,12 +35,24 @@ router = APIRouter(prefix="/xrays", tags=["xrays"])
 )
 async def create_analysis(
     file: UploadFile = File(..., description="Imagen PNG, resolución mínima 512×512 px"),
-    use_case: AnalyzeImageUseCase = Depends(get_analyze_use_case),
+    model: ModelName = Form(
+        default=ModelName.MEDSAM,
+        description="Modelo de segmentación a utilizar",
+    ),
+    model_registry: dict[ModelName, ModelPort] = Depends(get_model_registry),
+    storage: StoragePort = Depends(get_storage_adapter),
 ) -> AnalyzeResponse:
     if file.content_type not in ("image/png", "application/octet-stream"):
         raise HTTPException(
             status_code=400,
             detail="Solo se aceptan imágenes en formato PNG",
+        )
+
+    model_port = model_registry.get(model)
+    if model_port is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Modelo '{model}' no está disponible actualmente",
         )
 
     image_bytes = await file.read()
@@ -48,6 +62,8 @@ async def create_analysis(
             status_code=413,
             detail=f"La imagen supera el límite de {settings.max_upload_mb} MB",
         )
+
+    use_case = AnalyzeImageUseCase(model=model_port, storage=storage)
 
     try:
         analysis = await asyncio.wait_for(

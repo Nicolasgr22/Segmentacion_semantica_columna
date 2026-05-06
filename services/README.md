@@ -1,80 +1,36 @@
 # VertebraAI — Servicio de Segmentación de Columna Vertebral
 
+[![Python](https://img.shields.io/badge/Python-3.14%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+
 Microservicio de análisis automático de radiografías de columna vertebral desarrollado como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** de la Universidad de los Andes.
 
-Utiliza el modelo **SegFormer-B2** (`nvidia/mit-b2`) fine-tuneado sobre el dataset MaIA Scoliosis para segmentar 22 vértebras (C3–C7, T1–T12, L1–L5) en radiografías AP y laterales en formato PNG.
+Utiliza los diferentes modelos entrenados en el ejercicio del proyecto sobre el dataset MaIA Scoliosis para segmentar 17 vértebras (T1–T12, L1–L5) en radiografías AP y laterales en formato PNG.
 
 > **Aviso clínico:** Esta herramienta es un apoyo diagnóstico exclusivamente. Toda decisión clínica debe ser revisada por un radiólogo o especialista cualificado.
 
----
 
-## Arquitectura
-
-VertebraAI implementa **arquitectura hexagonal (puertos y adaptadores)** que desacopla la lógica de negocio de los frameworks y dependencias externas.
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (React)                         │
-│                    multipart/form-data PNG                       │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │ HTTP
-┌──────────────────────────▼───────────────────────────────────────┐
-│              ADAPTADORES DE ENTRADA (api/v1/routers/)            │
-│        vertebrae.py     health.py     export.py                  │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │ Schemas Pydantic
-┌──────────────────────────▼───────────────────────────────────────┐
-│                    CASOS DE USO (core/use_cases/)                │
-│         AnalyzeImageUseCase       ExportResultUseCase            │
-│                   │                        │                     │
-│          ┌────────▼────────┐   ┌───────────▼────────┐           │
-│          │   ModelPort     │   │   StoragePort      │ ← PUERTOS  │
-│          └────────┬────────┘   └───────────┬────────┘           │
-└───────────────────┼────────────────────────┼────────────────────┘
-                    │                        │
-┌───────────────────▼────────────────────────▼────────────────────┐
-│              ADAPTADORES DE SALIDA (infrastructure/)             │
-│    SegFormerAdapter (HuggingFace)    InMemoryStorageAdapter      │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Capas
-
-| Capa | Ruta | Responsabilidad |
-|------|------|-----------------|
-| Dominio | `app/core/domain/` | Entidades, puertos (ABCs), lógica pura |
-| Casos de uso | `app/core/use_cases/` | Orquestación del flujo de negocio |
-| Adaptadores entrada | `app/api/v1/` | Routers FastAPI, schemas Pydantic |
-| Adaptadores salida | `app/infrastructure/` | SegFormer, almacenamiento en memoria |
-
----
-
-## Prerrequisitos
-
-- Python 3.11+
-- ~4 GB RAM (inferencia CPU) o GPU con 6 GB+ VRAM para CUDA
-- Conexión a internet para descargar el checkpoint de HuggingFace (primera ejecución)
-- (Opcional) Checkpoint fine-tuneado local en `MODEL_LOCAL_PATH`
-
----
+## Pre-requisitos
+- Python 3.14.1 
+- uv
 
 ## Instalación
 
 ```bash
-# 1. Clonar el repositorio y entrar al directorio del servicio
+# 1. Clonar el repositorio y entrar al directorio principal
 git clone <repo-url>
-cd columna/services
+cd Segmentacion_semantica_columna
 
 # 2. Crear y activar entorno virtual
-python -m venv .venv
+uv venv .venv
 source .venv/bin/activate          # Linux/macOS
 # .venv\Scripts\activate           # Windows
 
 # 3. Instalar PyTorch CPU-only (más liviano; cambiar URL para GPU)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # 4. Instalar dependencias
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # 5. Configurar variables de entorno
 cp .env.example .env

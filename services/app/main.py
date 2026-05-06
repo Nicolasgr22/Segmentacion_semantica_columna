@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Cargando modelo SegFormer-B2...")
+    logger.info("Cargando modelo MedSAM...")
     try:
         get_model_adapter()
         logger.info("Modelo cargado correctamente.")

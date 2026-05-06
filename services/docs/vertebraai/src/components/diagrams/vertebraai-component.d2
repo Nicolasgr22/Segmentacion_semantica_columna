@@ -1,0 +1,170 @@
+direction: down
+
+classes: {
+  api: {
+    style: {
+      fill: "#D4E6F1"
+      stroke: "#2980B9"
+      font-size: 12
+    }
+  }
+  domain: {
+    style: {
+      fill: "#D5F5E3"
+      stroke: "#27AE60"
+      font-size: 12
+    }
+  }
+  port: {
+    style: {
+      fill: "#EAFAF1"
+      stroke: "#27AE60"
+      font-size: 12
+      stroke-dash: 4
+    }
+  }
+  adapter: {
+    style: {
+      fill: "#FEF9E7"
+      stroke: "#F39C12"
+      font-size: 12
+    }
+  }
+  storage: {
+    style: {
+      fill: "#E8DAEF"
+      stroke: "#8E44AD"
+      font-size: 12
+    }
+  }
+  config: {
+    style: {
+      fill: "#F2F3F4"
+      stroke: "#95A5A6"
+      font-size: 12
+    }
+  }
+  unavailable: {
+    style: {
+      fill: "#F2F3F4"
+      stroke: "#95A5A6"
+      font-size: 12
+      stroke-dash: 6
+      opacity: 0.6
+    }
+  }
+}
+
+api_layer: "API Layer" {
+  style: {
+    fill: "#EBF5FB"
+    stroke: "#2980B9"
+    stroke-width: 2
+    font-size: 14
+    bold: true
+  }
+
+  main: "main.py\nFastAPI app + lifespan\nCORS middleware" {
+    class: api
+  }
+
+  vertebrae_router: "vertebrae.py\nPOST /xrays\nSelección de modelo\nValidación PNG + tamaño" {
+    class: api
+  }
+
+  health_router: "health.py\nGET /health\nEstado + uptime" {
+    class: api
+  }
+
+  export_router: "export.py\nGET /xrays/{id}/exports/{format}\npng / mask / overlay / report" {
+    class: api
+  }
+
+  schemas: "schemas/\nModelName (enum)\nExportFormat (enum)\nAnalyzeResponse\nHealthResponse" {
+    class: api
+  }
+
+  main -> vertebrae_router: "include_router"
+  main -> health_router: "include_router"
+  main -> export_router: "include_router"
+  vertebrae_router -> schemas: "valida request\nserializa response"
+}
+
+core: "Core Domain" {
+  style: {
+    fill: "#EAFAF1"
+    stroke: "#27AE60"
+    stroke-width: 2
+    font-size: 14
+    bold: true
+  }
+
+  analyze_uc: "AnalyzeImageUseCase\n_validate_and_decode()\n_preprocess() CLAHE+letterbox\n_build_colored_mask()\n_compute_metrics()" {
+    class: domain
+  }
+
+  export_uc: "ExportResultUseCase\nexecute(xray_id, format)\ngenera PNG / overlay / JSON" {
+    class: domain
+  }
+
+  entities: "Entities\nVertebraAnalysis\nVertebra + VertebralRegion\nVertebralMask\nAnalysisMetrics + ModelMetrics" {
+    class: domain
+  }
+
+  model_port: "ModelPort (ABC)\npredict(image) → ModelOutput\nis_loaded()\nget_model_version()" {
+    class: port
+  }
+
+  storage_port: "StoragePort (ABC)\nsave() / get()\nexists() / delete()" {
+    class: port
+  }
+
+  analyze_uc -> model_port: "predict()"
+  analyze_uc -> storage_port: "save()"
+  analyze_uc -> entities: "produce"
+  export_uc -> storage_port: "get()"
+}
+
+infra: "Infrastructure" {
+  style: {
+    fill: "#FEFAF0"
+    stroke: "#F39C12"
+    stroke-width: 2
+    font-size: 14
+    bold: true
+  }
+
+  deps: "dependencies.py\nget_model_adapter() @lru_cache\nget_model_registry()\nget_storage_adapter() @lru_cache" {
+    class: config
+  }
+
+  config: "config.py / .env\nsegformer_b2_checkpoint\nsegformer_b2_local_path\nmedsam_sam_checkpoint\nmedsam_finetuned_checkpoint" {
+    class: config
+  }
+
+  segformer: "SegFormerAdapter\nload_model(checkpoint)\n_sync_predict() → ThreadPool\ninterpolate + argmax → mask\n23 clases (C3–C7, T1–T12, L1–L5)" {
+    class: adapter
+  }
+
+  medsam: "MedSAMAdapter\nload_model(sam_ckpt, ft_ckpt)\n_sync_predict() → ThreadPool\nbinary mask → 2-class probs\n[próximamente]" {
+    class: unavailable
+  }
+
+  memory: "InMemoryStorageAdapter\nOrderedDict (max 100 entradas)\nLRU eviction automático" {
+    class: storage
+  }
+
+  config -> deps: "settings"
+  deps -> segformer: "instancia + carga al startup"
+  deps -> medsam: "instancia (cuando disponible)"
+  deps -> memory: "instancia"
+}
+
+api_layer.vertebrae_router -> core.analyze_uc: "execute(image_bytes, filename)\nmodelo seleccionado del registry"
+api_layer.export_router -> core.export_uc: "execute(xray_id, format)"
+api_layer.health_router -> infra.deps: "Depends(get_model_port)"
+api_layer.vertebrae_router -> infra.deps: "Depends(get_model_registry)\nDepends(get_storage_adapter)"
+
+infra.segformer -> core.model_port: "implements"
+infra.medsam -> core.model_port: "implements"
+infra.memory -> core.storage_port: "implements"

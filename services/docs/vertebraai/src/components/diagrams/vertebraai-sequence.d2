@@ -1,0 +1,59 @@
+shape: sequence_diagram
+
+Cliente: "Cliente\n(Frontend)"
+Router: "vertebrae.py\n(Router)"
+DI: "dependencies.py\n(DI Container)"
+UseCase: "AnalyzeImageUseCase"
+Adapter: "SegFormerAdapter"
+Executor: "ThreadPoolExecutor"
+Storage: "InMemoryStorageAdapter"
+
+Cliente -> Router: "1. POST /api/vertebraai/xrays\n   Content-Type: multipart/form-data\n   file=<PNG>, model=segformer-b2"
+
+Router -> Router: "2. Valida content_type\n   image/png ó application/octet-stream"
+
+Router -> DI: "3. FastAPI resuelve Depends(get_model_registry)"
+DI -> DI: "4. get_model_adapter() → SegFormerAdapter\n    (cargado en startup, @lru_cache)"
+DI -> Router: "5. registry = {segformer-b2: SegFormerAdapter}"
+
+Router -> Router: "6. model_port = registry.get(ModelName.SEGFORMER_B2)\n    model_port is not None → continúa"
+
+Router -> Router: "7. Lee image_bytes\n    Verifica len(bytes) ≤ 50 MB"
+
+Router -> UseCase: "8. AnalyzeImageUseCase(model_port, storage)\n    execute(image_bytes, filename)"
+
+UseCase -> UseCase: "9. _validate_and_decode(image_bytes)\n    PIL.Image.open() → img\n    Verifica img.format == PNG\n    Verifica w ≥ 512 y h ≥ 512\n    → image_rgb: np.ndarray (H, W, 3)"
+
+UseCase -> UseCase: "10. _preprocess(image_rgb)\n     cv2.cvtColor → escala de grises\n     CLAHE clipLimit=2.0, tileGrid=(8,8)\n     cv2.cvtColor → RGB con contraste\n     _letterbox() → canvas 512×512\n     → preprocessed: np.ndarray (512, 512, 3)"
+
+UseCase -> Adapter: "11. await model_port.predict(preprocessed)\n     [llamada asíncrona]"
+
+Adapter -> Executor: "12. loop.run_in_executor(_sync_predict)\n     [libera event loop]"
+
+Executor -> Executor: "13. processor(images=image) → pixel_values\n     Normaliza + convierte a tensor"
+
+Executor -> Executor: "14. torch.no_grad()\n     model(pixel_values) → logits\n     shape: (1, 23, H/4, W/4)"
+
+Executor -> Executor: "15. F.interpolate(logits, size=(512,512))\n     mode=bilinear → logits_up (1, 23, 512, 512)"
+
+Executor -> Executor: "16. softmax(logits_up, dim=1) → probs (23, 512, 512)\n     argmax(dim=1) → mask uint8 (512, 512)\n     valores 0-22 (0=fondo, 1-22=vértebras)"
+
+Executor -> Adapter: "17. ModelOutput(mask, probs, latency_ms, model_version)"
+Adapter -> UseCase: "18. ModelOutput recibido"
+
+UseCase -> UseCase: "19. build_vertebrae_from_mask(mask, probs)\n     Para class_id 1..22:\n       pixel_count = sum(mask == class_id)\n       confidence = mean(probs[class_id][pixels])\n       bbox = (x_min, y_min, x_max, y_max)\n       centroid = (mean_col, mean_row)\n     → list[Vertebra] (siempre 22 entradas)"
+
+UseCase -> UseCase: "20. _build_colored_mask(mask)\n     Pinta píxeles por región:\n       cervical → azul #4285F4\n       thoracic → verde #34A853\n       lumbar   → rojo #EA4335\n     PIL.Image.save(PNG) → colored_mask_bytes"
+
+UseCase -> UseCase: "21. _compute_metrics(model_output, vertebrae)\n     detected_count, global_confidence\n     by_region: {cervical, thoracic, lumbar}\n     dice_approx = conf * 0.97\n     iou_approx = dice / (2 - dice)\n     → AnalysisMetrics"
+
+UseCase -> UseCase: "22. Construye VertebraAnalysis\n     study_id = uuid4()\n     timestamp = utcnow()\n     mask + metrics + vertebrae + steps"
+
+UseCase -> Storage: "23. await storage.save(analysis)\n     OrderedDict[study_id] = analysis\n     Si len ≥ 100 → evicta el más antiguo"
+Storage -> UseCase: "24. study_id confirmado"
+
+UseCase -> Router: "25. VertebraAnalysis"
+
+Router -> Router: "26. analysis_to_response(analysis)\n     Serializa con Pydantic\n     mask.data → Base64 string"
+
+Router -> Cliente: "27. HTTP 201 Created\n    AnalyzeResponse JSON\n    (study_id, timestamp, mask,\n     metrics, vertebrae[22], processing)"
