@@ -100,7 +100,10 @@ def make_dataloaders(
     df_val = df[df["split"] == "val"].copy()
     df_test = df[df["split"] == "test"].copy()
 
-    train_ds = SpineMedSAMDataset(df_train, sam_model, box_pad=box_pad, augment=True)
+    # Augmentation desactivada: con ~103 imágenes de train las transformaciones
+    # geométricas agresivas (flip, rotate, elastic) generan anatomía irreal
+    # y reducen el Dice ~3% respecto al notebook original (0.85 vs 0.88)
+    train_ds = SpineMedSAMDataset(df_train, sam_model, box_pad=box_pad, augment=False)
     val_ds = SpineMedSAMDataset(df_val, sam_model, box_pad=box_pad, augment=False)
     test_ds = SpineMedSAMDataset(df_test, sam_model, box_pad=box_pad, augment=False)
 

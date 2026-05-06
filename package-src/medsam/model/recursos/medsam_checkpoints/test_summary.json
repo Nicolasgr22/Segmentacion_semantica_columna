@@ -1,9 +1,9 @@
 {
   "run_name": "exp_final_lastblock_unfrozen",
-  "best_val_dice": 0.8469060225920244,
-  "test_dice": 0.8378973159893152,
-  "test_iou": 0.7319309846532124,
-  "test_precision": 0.8209124071240568,
-  "test_recall": 0.8674436178200425,
-  "n_test_images": 23
+  "best_val_dice": 0.8798417699964423,
+  "test_dice": 0.8479143179351611,
+  "test_iou": 0.747130276696581,
+  "test_precision": 0.8263905066737646,
+  "test_recall": 0.8844276284122267,
+  "n_test_images": 38
 }

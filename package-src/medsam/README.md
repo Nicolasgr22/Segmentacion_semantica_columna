@@ -118,6 +118,25 @@ tox -e build
 
 ---
 
+## Pruebas unitarias
+
+```bash
+cd package-src/medsam
+
+# Todas las pruebas
+tox -e py310
+
+# Solo predict.py (rápido, sin GPU)
+python -m pytest tests/unit/test_predict.py -v
+
+# Con reporte de cobertura
+python -m pytest tests/unit/test_predict.py -v --cov=model --cov-report=term-missing
+```
+
+Las pruebas siguen los principios **FIRST** — todo el modelo SAM está mockeado, no requieren GPU ni archivos `.pth`. 18 tests se ejecutan en ~2 segundos.
+
+---
+
 ## Uso en inferencia
 
 ```python
@@ -142,6 +161,7 @@ proba = predictor.predict_proba(image)        # probabilidades float32 [0,1]
 | Comando | Descripción |
 |---------|-------------|
 | `tox -e train` | Entrenar el modelo |
+| `tox -e py310` | Ejecutar pruebas unitarias con cobertura |
 | `tox -e build` | Generar `.whl` y `.tar.gz` en `dist/` |
 | `tox -e lint` | Verificar estilo de código |
 | `tox -e type` | Chequeo de tipos con mypy |

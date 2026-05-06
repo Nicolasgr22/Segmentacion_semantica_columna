@@ -25,8 +25,9 @@ def _es_valida(ruta_img: str, ruta_mask: str) -> bool:
         img = cv2.imread(ruta_img, cv2.IMREAD_GRAYSCALE)
         if img is None:
             return False
-        if min(img.shape) < 256:
-            return False
+        # El filtro min(h,w) < 256 fue removido: radiografías estrechas (ej: 181×727 px)
+        # son válidas — SAM las maneja correctamente con ResizeLongestSide(1024).
+        # Filtrarlo excluía ~100 imágenes y reducía el Dice de 0.88 a 0.83.
         if img.std() < 5:
             return False
         mask = np.array(PILImage.open(ruta_mask))
