@@ -1,19 +1,18 @@
 """
 Punto de entrada CLI para el entrenamiento de MedSAM.
+Al finalizar el entrenamiento sube el modelo a Databricks Unity Catalog
+respetando las reglas de nombrado y versionado definidas en upload_to_databricks.py.
 
 Lee config/config.yml y las credenciales de .env (en la raíz del paquete).
 Registrado como entry_point en setup.py → disponible como comando `medsam-train`.
 
 Uso:
     cd package-src/medsam
-    python -m model.train_runner
-    python -m model.train_runner --epochs 5
-    medsam-train                          # si el paquete está instalado
-
-Nota sobre device:
-    El dispositivo se detecta automáticamente igual que en el notebook:
-        "cuda" if torch.cuda.is_available() else "cpu"
-    No se expone como argumento CLI porque no debe forzarse manualmente.
+    tox -e train                          # entrena y sube (omite si VERSION ya existe)
+    tox -e train -- --force               # entrena y sube aunque VERSION ya esté registrada
+    tox -e train -- --no-upload           # entrena sin subir a Databricks
+    tox -e train -- --epochs 5 --force
+    python -m model.train_runner          # equivalente a tox -e train
 """
 
 from __future__ import annotations
@@ -35,21 +34,40 @@ CONFIG_PATH = MODEL_DIR / "config/config.yml"
 
 
 def _parse_args() -> argparse.Namespace:
+    # Pre-parsear solo --config para poder leer el YAML antes de definir defaults
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", default=str(CONFIG_PATH))
+    pre_args, _ = pre.parse_known_args()
+
+    with open(pre_args.config) as f:
+        cfg = yaml.safe_load(f)
+
+    tr = cfg["training"]
+
     p = argparse.ArgumentParser(description="MedSAM fine-tuning runner")
-    # device: calculado automáticamente como en el notebook, no es argumento
     p.add_argument(
         "--epochs",
         type=int,
-        default=20,  # hardcodeado en notebook: num_epochs_final = 20
-        help="Épocas máximas de entrenamiento",
+        default=tr["num_epochs"],
+        help=f"Épocas máximas de entrenamiento (config.yml: {tr['num_epochs']})",
     )
     p.add_argument(
         "--batch-size",
         type=int,
-        default=2,  # hardcodeado en notebook: batch_size=2 en DataLoader
-        help="Muestras por batch",
+        default=tr["batch_size"],
+        help=f"Muestras por batch (config.yml: {tr['batch_size']})",
     )
-    p.add_argument("--config", default=str(CONFIG_PATH))
+    p.add_argument("--config", default=pre_args.config)
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="Fuerza la subida a Databricks aunque VERSION ya esté registrada.",
+    )
+    p.add_argument(
+        "--no-upload",
+        action="store_true",
+        help="Omite la subida a Databricks al finalizar el entrenamiento.",
+    )
     return p.parse_args()
 
 
@@ -125,6 +143,11 @@ def main() -> None:
 
     from model import train
 
+    # Si no hay credenciales, forzar no_upload para evitar fallo
+    skip_upload = args.no_upload or not (host and token)
+    if args.no_upload is False and not (host and token):
+        print("\n[AVISO] DATABRICKS_HOST/TOKEN no configurados — registro UC omitido.")
+
     results = train(
         splits_csv=splits_csv,
         checkpoint_path=sam_ckpt,
@@ -145,10 +168,15 @@ def main() -> None:
         checkpoint_name=tr["checkpoint_name"],
         mlflow_run_name=cfg["mlflow"]["run_name"],
         seed=tr["seed"],
+        no_upload=skip_upload,
+        force_upload=args.force,
     )
 
     print(f"\nEntrenamiento terminado. Mejor Val Dice: {results['best_val_dice']:.4f}")
     print(f"Modelo guardado en: {results['best_model_path']}")
+    reg = results.get("registration", {})
+    if reg.get("uc_url"):
+        print(f"Modelo en Unity Catalog: {reg['uc_url']}")
 
 
 if __name__ == "__main__":

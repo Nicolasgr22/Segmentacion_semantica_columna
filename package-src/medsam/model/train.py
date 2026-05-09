@@ -310,6 +310,8 @@ def train(
     checkpoint_name: str = "medsam_lastblock_unfrozen.pth",
     mlflow_run_name: str = "exp_final_lastblock_unfrozen",
     seed: int = 42,
+    no_upload: bool = False,
+    force_upload: bool = False,
 ) -> dict:
     """
     Fine-tuning de MedSAM con el último bloque del encoder descongelado.
@@ -490,9 +492,6 @@ def train(
 
         mlflow.log_metric("best_val_dice", best_val_dice)
 
-        # ── Artefacto: checkpoint final (solo una vez, al terminar) ───────────
-        mlflow.log_artifact(str(best_path))
-
         # ── Reporte en test con el mejor modelo ───────────────────────────────
         print("\nEvaluando en test con el mejor modelo...")
         model.load_state_dict(
@@ -528,10 +527,24 @@ def train(
         summary_path.write_text(json.dumps(summary, indent=2))
         mlflow.log_artifact(str(summary_path))
 
+        # ── Registro del modelo en Unity Catalog (mismo run) ──────────────────
+        registration: dict = {}
+        if no_upload:
+            print("\n[--no-upload] Registro en Unity Catalog omitido.")
+        else:
+            try:
+                from .upload_to_databricks import register_in_uc
+                model.cpu()
+                registration = register_in_uc(model, force=force_upload)
+            except Exception as e:
+                print(f"\n[AVISO] El registro en Unity Catalog falló: {e}")
+                print("        Métricas y artefactos sí quedaron en el run MLflow.")
+
     return {
         "history": history,
         "best_val_dice": best_val_dice,
         "best_model_path": str(best_path),
         "test_metrics": test_metrics,
         "test_report_path": str(report_path),
+        "registration": registration,
     }

@@ -16,3 +16,4 @@ mlflow
 databricks-sdk
 python-dotenv
 pyyaml
+segment_anything
