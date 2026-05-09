@@ -1,0 +1,32 @@
+﻿# Datasets y datos procesados
+Scoliosis_Dataset/
+MaIA_Scoliosis_Dataset/
+dataset_aug/
+dataset_procesado/
+dataset_procesado_scoliosis_medsam/
+
+# Pesos y checkpoints
+*.pt
+*.pth
+checkpoints/*
+!checkpoints/README.md
+
+# Resultados generados pesados
+resultados_*/
+outputs/
+runs/
+*.npy
+*.npz
+
+# Jupyter/cache
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Archivos locales
+.env
+.DS_Store
+Thumbs.db
+
+dataset*/
+*.ckpt

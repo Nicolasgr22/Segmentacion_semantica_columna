@@ -1,0 +1,2 @@
+variante,prompt_mode,bbox_expansion,pacientes,n_eval_estricto,n_segmentadas_total,dice_estricto_promedio,iou_estricto_promedio,dice_flexible_promedio,iou_flexible_promedio,tiempo_por_vertebra_s
+medsam_decoder_encoder_parcial,box_only,sin_pad,38,541,646,0.3233076446802267,0.2745948073904934,0.756198475050795,0.6454794450310956,0.02026861625357355
