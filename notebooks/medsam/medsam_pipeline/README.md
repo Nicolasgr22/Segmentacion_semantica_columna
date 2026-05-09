@@ -83,4 +83,11 @@ El repositorio separa la historia en dos niveles:
 - `experiments/`: ramas experimentales conservadas. No son la estrategia final, pero explican decisiones importantes y muestran de que etapa nace cada prueba.
 
 Para entender la derivacion de ramas, ver `docs/versionamiento_git.md`.
+## Checkpoints y archivos pesados
+
+Los pesos entrenados y checkpoints finales no se versionan en GitHub por tamaño. Para reproducir inferencia o continuar pruebas, usar la carpeta compartida de Drive:
+
+[https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU](https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU)
+
+La carpeta de Drive contiene los checkpoints de la base robusta NN-SAM + MedSAM y de la estrategia final VertebraPrompt + BoxRefiner + MedSAM.
 

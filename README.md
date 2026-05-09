@@ -109,7 +109,7 @@ Además de los notebooks iniciales, se adiciona la línea [`notebooks/medsam/med
 - estrategia final `VertebraPrompt + BoxRefiner + MedSAM`;
 - métricas comparativas y referencia a checkpoints externos en Drive.
 
-Los pesos `.pt` no se suben al repositorio por tamaño. La carpeta `checkpoints/` contiene solo instrucciones para recuperarlos desde Drive.
+Los pesos `.pt` no se suben al repositorio por tamaño. La carpeta `checkpoints/` contiene instrucciones para recuperarlos desde Drive: [https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU](https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU).
 ----------|-------------|
 | [`01-recoleccion-preparacion-datos.ipynb`](notebooks/01-recoleccion-preparacion-datos.ipynb) | Recolección, exploración y preparación del dataset MaIA Scoliosis |
 | [`prueba inicial multiclase preliminar SAM.ipynb`](notebooks/prueba%20inicial%20multiclase%20preliminar%20SAM.ipynb) | Prueba de concepto inicial con SAM (Segment Anything Model) multiclase |
@@ -275,4 +275,5 @@ Cobertura objetivo: ≥ 80%
 ## Licencia
 
 Proyecto académico — Universidad de los Andes, MaIA 2026. Uso restringido a fines educativos e investigativos.
+
 

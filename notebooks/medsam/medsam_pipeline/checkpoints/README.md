@@ -36,3 +36,8 @@ Corresponde al notebook:
 ```text
 notebooks/06_estrategia_ganadora_vertebraprompt_boxrefiner.ipynb
 ```
+
+## Carpeta Drive
+
+Los checkpoints se encuentran en: [https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU](https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU).
+
