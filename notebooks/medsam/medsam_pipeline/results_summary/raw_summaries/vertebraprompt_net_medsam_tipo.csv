@@ -1,0 +1,3 @@
+variante,tipo_real,prompt_mode,bbox_expansion,pacientes,n_eval_estricto,n_segmentadas_total,dice_estricto_promedio,iou_estricto_promedio,dice_flexible_promedio,iou_flexible_promedio,tiempo_por_vertebra_s
+medsam_decoder_encoder_parcial,escoliosis,box_only,sin_pad,27,356,459,0.1476184327131343,0.10648419061339275,0.26784637740602907,0.1965900750278118,0.019776329194238176
+medsam_decoder_encoder_parcial,normal,box_only,sin_pad,11,184,187,0.20264840018008376,0.14762941233904148,0.4291679807027919,0.3300629263294051,0.020846457220613956

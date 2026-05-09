@@ -1,4 +1,4 @@
-# VertebraAI — Segmentación Semántica de Columna Vertebral
+﻿# VertebraAI — Segmentación Semántica de Columna Vertebral
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -97,7 +97,20 @@ with mlflow.start_run():
 Los notebooks están en la carpeta [`notebooks/`](notebooks/) y documentan las fases de investigación y desarrollo:
 
 | Notebook | Descripción |
-|----------|-------------|
+|---
+### Línea MedSAM: pipeline experimental
+
+Además de los notebooks iniciales, se adiciona la línea [`notebooks/medsam/medsam_pipeline/`](notebooks/medsam/medsam_pipeline/) con la investigación completa basada en MedSAM:
+
+- preparación y particiones usadas para la ruta MedSAM;
+- detector ligero de cajas vertebrales;
+- entrenamiento NN-SAM + MedSAM;
+- experimentos descartados pero metodológicamente relevantes;
+- estrategia final `VertebraPrompt + BoxRefiner + MedSAM`;
+- métricas comparativas y referencia a checkpoints externos en Drive.
+
+Los pesos `.pt` no se suben al repositorio por tamaño. La carpeta `checkpoints/` contiene instrucciones para recuperarlos desde Drive: [https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU](https://drive.google.com/drive/folders/1kf8aPQV06_A_4ROW5TwkgXL0XxcgF5KU).
+----------|-------------|
 | [`01-recoleccion-preparacion-datos.ipynb`](notebooks/01-recoleccion-preparacion-datos.ipynb) | Recolección, exploración y preparación del dataset MaIA Scoliosis |
 | [`prueba inicial multiclase preliminar SAM.ipynb`](notebooks/prueba%20inicial%20multiclase%20preliminar%20SAM.ipynb) | Prueba de concepto inicial con SAM (Segment Anything Model) multiclase |
 
@@ -262,3 +275,5 @@ Cobertura objetivo: ≥ 80%
 ## Licencia
 
 Proyecto académico — Universidad de los Andes, MaIA 2026. Uso restringido a fines educativos e investigativos.
+
+
