@@ -56,3 +56,5 @@ ENV/
 
 # Proyecto maia
 Proyecto_maia/*
+*.pth
+*.whl
