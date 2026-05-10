@@ -5,28 +5,56 @@
 
 Microservicio de análisis automático de radiografías de columna vertebral desarrollado como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** de la Universidad de los Andes.
 
-Utiliza los diferentes modelos entrenados en el ejercicio del proyecto sobre el dataset MaIA Scoliosis para segmentar 17 vértebras (T1–T12, L1–L5) en radiografías AP y laterales en formato PNG.
+Expone el **pipeline ganador** del notebook 06 (`VertebraPrompt-Net + BoxRefiner + MedSAM`) detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). Segmenta hasta **22 vértebras** (C3-C7, T1-T12, L1-L5) en radiografías AP en formato PNG.
 
 > **Aviso clínico:** Esta herramienta es un apoyo diagnóstico exclusivamente. Toda decisión clínica debe ser revisada por un radiólogo o especialista cualificado.
 
+---
+
+## Pipeline de inferencia
+
+```
+Imagen PNG/JPEG (≥32×32 px, cualquier tamaño)
+       │
+       ▼
+┌──────────────────────────────────────────────────────┐
+│  VertebraPromptBoxRefinerAdapter.predict()           │
+│  ┌────────────────────────────────────────────────┐  │
+│  │ Resize a 1024×1024 + normalización percentil   │  │
+│  │ (idéntico al notebook 06: BILINEAR + 1/99.5)   │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │ 1. VertebraPrompt-Net  (heatmap+cajas)         │  │
+│  │ 2. BoxRefiner          (ajusta cajas)          │  │
+│  │ 3. MedSAM por caja     (máscaras)              │  │
+│  └────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+       │
+       ▼
+[ Composición multi-clase + métricas + máscara coloreada ]
+```
+
+Resultados objetivo (test, según `notebooks/medsam_pipeline/results_summary/`):
+- Dice estricto: **0.5530** | Dice flexible: **0.7678**
+
+---
 
 ## Pre-requisitos
-- Python 3.14.1 
-- uv
+
+- Python 3.14.1
+- [uv](https://github.com/astral-sh/uv) (gestor de paquetes/venv)
 
 ## Instalación
 
 ```bash
-# 1. Clonar el repositorio y entrar al directorio principal
-git clone <repo-url>
-cd Segmentacion_semantica_columna
+# 1. Clonar y entrar al servicio
+cd services
 
 # 2. Crear y activar entorno virtual
 uv venv .venv
 source .venv/bin/activate          # Linux/macOS
 # .venv\Scripts\activate           # Windows
 
-# 3. Instalar PyTorch CPU-only (más liviano; cambiar URL para GPU)
+# 3. Instalar PyTorch CPU-only (cambiar URL para CUDA)
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # 4. Instalar dependencias
@@ -34,7 +62,7 @@ uv pip install -r requirements.txt
 
 # 5. Configurar variables de entorno
 cp .env.example .env
-# Editar .env con tu configuración
+# Editar .env con las rutas de los checkpoints
 ```
 
 ---
@@ -43,12 +71,15 @@ cp .env.example .env
 
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
-| `MODEL_CHECKPOINT` | Checkpoint de HuggingFace Hub | `nvidia/mit-b2` |
-| `MODEL_LOCAL_PATH` | Ruta a checkpoint fine-tuneado local (vacío = usar Hub) | `` |
 | `MODEL_DEVICE` | Dispositivo de inferencia: `cpu`, `cuda`, `mps` | `cpu` |
+| `MODEL_INPUT_SIZE` | Resolución de entrada (lado del letterbox) | `512` |
+| `MEDSAM_PROMPT_NET_CHECKPOINT` | Checkpoint de VertebraPrompt-Net | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` |
+| `MEDSAM_BOX_REFINER_CHECKPOINT` | Checkpoint de BoxRefiner | `model-pkg/medsam/box_refiner_best.pt` |
+| `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/sam_vit_b_01ec64.pth` |
+| `MEDSAM_FINETUNED_CHECKPOINT` | Checkpoint MedSAM fine-tuned (decoder + encoder parcial) | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` |
 | `MAX_UPLOAD_MB` | Tamaño máximo de imagen aceptada (MB) | `50` |
 | `INFERENCE_TIMEOUT_S` | Timeout de inferencia (segundos) | `60` |
-| `CORS_ORIGINS` | Orígenes permitidos (JSON array) | `["http://localhost:3000","http://localhost:5500"]` |
+| `CORS_ORIGINS` | Orígenes permitidos (lista JSON) | `["http://localhost:3000","http://localhost:5500","http://127.0.0.1:5500"]` |
 | `DEBUG` | Modo debug de FastAPI | `false` |
 | `PORT` | Puerto del servidor | `8000` |
 
@@ -68,54 +99,81 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # Construir imagen
 docker build -t vertebraai .
 
-# Ejecutar con checkpoint local montado
+# Ejecutar con checkpoints montados
 docker run -p 8000:8000 \
-  -v /ruta/al/modelo:/opt/models \
-  -e MODEL_LOCAL_PATH=/opt/models/segformer-b2-finetuned \
+  -v /Users/anferiro/personal/maia/proyecto/Segmentacion_semantica_columna/services/model-pkg:/app/model-pkg:ro \
+  -e MEDSAM_PROMPT_NET_CHECKPOINT=/opt/models/vertebraprompt_net_auxiliar_best.pt \
+  -e MEDSAM_BOX_REFINER_CHECKPOINT=/opt/models/box_refiner_best.pt \
+  -e MEDSAM_SAM_CHECKPOINT=/opt/models/sam_vit_b_01ec64.pth \
+  -e MEDSAM_FINETUNED_CHECKPOINT=/opt/models/medsam_decoder_encoder_parcial.pt \
   -e MODEL_DEVICE=cpu \
   vertebraai
 ```
 
-Al arrancar, el servicio carga el modelo en memoria. El primer inicio puede tardar 30–60 segundos dependiendo de la conexión y el hardware.
+Al arrancar, el servicio carga las **4 redes** en memoria (~2 GB total). El primer arranque puede tardar 60–120 segundos.
 
 ---
 
 ## Endpoints
 
+Todos bajo el prefix `/api/vertebraai`.
+
 ### `POST /api/vertebraai/xrays`
 
-Crea un nuevo análisis de radiografía de columna vertebral. Retorna `201 Created`.
+Crea un nuevo análisis de radiografía. Retorna `201 Created`.
 
 ```bash
 curl -X POST http://localhost:8000/api/vertebraai/xrays \
   -F "file=@radiografia.png;type=image/png" \
-  | jq '{study_id, detected: .metrics.detected_count, confidence: .metrics.confidence}'
+  -F "model=medsam" \
+  | jq '{study_id, detected: .metrics.detected_count, confidence: .metrics.global_confidence}'
 ```
 
-**Entrada:** `multipart/form-data` con campo `file` (PNG, mínimo 512×512 px)
+**Entrada:** `multipart/form-data`
+- `file`: PNG o JPEG, mínimo 32×32 px (cualquier tamaño es aceptado; el adapter reescala internamente al tamaño que necesita el modelo)
+- `model` (opcional): `medsam` (por defecto). Otros modelos pueden registrarse en `dependencies.py` siguiendo el patrón dispatch.
 
-**Salida:** JSON con `study_id`, máscara en base64, métricas y lista de 22 vértebras.
+**Salida:** JSON con `study_id`, máscara coloreada en base64, métricas y lista de 22 vértebras (C3-C7 + T1-T12 + L1-L5).
 
 ---
 
 ### `GET /api/vertebraai/health`
 
-Estado del servicio y del modelo.
+Estado del servicio y del modelo cargado.
 
 ```bash
 curl http://localhost:8000/api/vertebraai/health | jq .
-# {"status": "ok", "model_version": "nvidia/mit-b2", "model_loaded": true, "uptime_s": 120.3}
+# {
+#   "status": "ok",
+#   "model_version": "vertebraprompt+boxrefiner+medsam-vit-b",
+#   "model_loaded": true,
+#   "uptime_s": 120.3
+# }
 ```
 
 ---
 
-### `GET /api/vertebraai/xrays/{analysis_id}/exports/{format}`
+### `GET /api/vertebraai/models`
+
+Catálogo de modelos publicados con sus métricas de experimento (Model Cards).
+
+```bash
+curl http://localhost:8000/api/vertebraai/models | jq '.[] | {id, name, dice}'
+```
+
+### `GET /api/vertebraai/models/{model_id}`
+
+Detalle de un Model Card específico.
+
+---
+
+### `GET /api/vertebraai/xrays/{xray_id}/exports/{format}`
 
 Exporta el resultado de un análisis previo.
 
 | Formato | Descripción | Content-Type |
 |---------|-------------|--------------|
-| `png` | Imagen original redimensionada | `image/png` |
+| `png` | Imagen original | `image/png` |
 | `mask` | Máscara de segmentación coloreada | `image/png` |
 | `overlay` | Original + máscara superpuesta | `image/png` |
 | `report` | Reporte JSON completo | `application/json` |
@@ -140,7 +198,7 @@ Con el servicio corriendo:
 - **ReDoc:** http://localhost:8000/api/redoc
 - **OpenAPI JSON:** http://localhost:8000/api/openapi.json
 
-El archivo `openapi/vertebraAI.yml` contiene la especificación completa OpenAPI 3.0.3.
+El archivo `openapi/vertebraAI.yml` contiene la especificación OpenAPI 3.0.3 completa.
 
 ---
 
@@ -153,16 +211,14 @@ pytest tests/ -v
 # Con reporte de cobertura
 pytest tests/ -v --cov=app --cov-report=term-missing
 
-# Solo pruebas unitarias
+# Solo unitarias
 pytest tests/unit/ -v
 
-# Prueba específica
+# Test específico
 pytest tests/unit/test_analyze_image_use_case.py -v
 ```
 
-Las pruebas están diseñadas para ejecutarse **sin GPU ni modelo descargado**: todos los adapters externos son mockeados con `unittest.mock`.
-
-Cobertura objetivo: ≥ 80%
+Las pruebas se ejecutan **sin GPU ni checkpoints reales**: todos los puertos externos están mockeados con `unittest.mock` (ver `tests/conftest.py`).
 
 ---
 
@@ -172,41 +228,48 @@ Cobertura objetivo: ≥ 80%
 services/
 ├── app/
 │   ├── api/v1/
-│   │   ├── routers/          # Endpoints FastAPI
-│   │   │   ├── vertebrae.py  # POST /api/vertebrae/analyze
-│   │   │   ├── health.py     # GET  /api/health
-│   │   │   └── export.py     # GET  /api/export/{study_id}/{format}
+│   │   ├── routers/                      # Endpoints FastAPI
+│   │   │   ├── vertebrae.py              # POST /api/vertebraai/xrays
+│   │   │   ├── health.py                 # GET  /api/vertebraai/health
+│   │   │   ├── export.py                 # GET  /api/vertebraai/xrays/{id}/exports/{format}
+│   │   │   └── models.py                 # GET  /api/vertebraai/models[/{id}]
 │   │   └── schemas/
-│   │       ├── requests.py   # Enum ExportFormat
-│   │       └── responses.py  # Schemas Pydantic + mapper analysis_to_response()
+│   │       ├── requests.py               # Enums ModelName, ExportFormat
+│   │       ├── responses.py              # Schemas Pydantic + analysis_to_response()
+│   │       └── model_schemas.py          # Schemas de Model Cards
 │   ├── core/
 │   │   ├── domain/
 │   │   │   ├── entities/
-│   │   │   │   ├── vertebra.py   # Vertebra, VertebralRegion, ID2LABEL, build_vertebrae_from_mask()
-│   │   │   │   └── analysis.py   # VertebraAnalysis, AnalysisMetrics, VertebralMask
+│   │   │   │   ├── vertebra.py           # Vertebra, VertebralRegion, build_vertebrae_from_mask
+│   │   │   │   └── analysis.py           # VertebraAnalysis, AnalysisMetrics, VertebralMask
 │   │   │   └── ports/
-│   │   │       ├── model_port.py    # ABC ModelPort, ModelOutput
-│   │   │       └── storage_port.py  # ABC StoragePort
+│   │   │       ├── model_port.py         # ABC ModelPort, ModelOutput
+│   │   │       ├── model_registry_port.py
+│   │   │       └── storage_port.py       # ABC StoragePort
 │   │   └── use_cases/
-│   │       ├── analyze_image.py  # AnalyzeImageUseCase (orquesta el flujo completo)
-│   │       └── export_result.py  # ExportResultUseCase
+│   │       ├── analyze_image.py          # Orquesta validación → preprocesar → predict → postprocesar
+│   │       └── export_result.py          # Lectura desde storage + serialización por formato
 │   ├── infrastructure/
 │   │   └── adapters/
 │   │       ├── model/
-│   │       │   └── segformer_adapter.py  # SegFormerAdapter (HuggingFace)
+│   │       │   ├── vertebraprompt_boxrefiner_adapter.py   # ★ activo: pipeline ganador
+│   │       │   ├── medsam_adapter.py                       # legacy (no usado)
+│   │       │   └── segformer_adapter.py                    # legacy (no usado)
+│   │       ├── registry/
+│   │       │   └── in_memory_model_registry.py             # Catálogo de Model Cards
 │   │       └── storage/
-│   │           └── in_memory_adapter.py  # InMemoryStorageAdapter (OrderedDict LRU)
-│   ├── config.py       # Settings con pydantic-settings
-│   ├── dependencies.py # Inyección de dependencias (lru_cache singletons)
-│   └── main.py         # FastAPI app + lifespan + CORS
+│   │           └── in_memory_adapter.py                    # OrderedDict LRU (max=100)
+│   ├── config.py                         # Settings con pydantic-settings
+│   ├── dependencies.py                   # Inyección de dependencias (lru_cache + dispatch dict)
+│   └── main.py                           # FastAPI app + lifespan + CORS
 ├── tests/
-│   ├── conftest.py     # Fixtures compartidas (mocks, imágenes dummy)
+│   ├── conftest.py                       # Fixtures compartidas
 │   └── unit/
-│       ├── test_analyze_image_use_case.py  # 8 casos
-│       ├── test_vertebrae_router.py        # 7 casos
-│       └── test_segformer_adapter.py       # 5 casos
+│       ├── test_analyze_image_use_case.py
+│       ├── test_vertebrae_router.py
+│       └── test_segformer_adapter.py     # tests del adapter legacy
 ├── openapi/
-│   └── vertebraAI.yml  # Especificación OpenAPI 3.0.3 completa
+│   └── vertebraAI.yml                    # Especificación OpenAPI 3.0.3
 ├── requirements.txt
 ├── Dockerfile
 ├── .env.example
@@ -217,14 +280,20 @@ services/
 
 ## Decisiones de diseño
 
-**CLAHE en el caso de uso, no en el adapter**
-El preprocesamiento CLAHE es parte de la lógica de negocio (definida durante el entrenamiento en `augment.py`). Vivirlo en el use case permite testarlo sin el modelo real y garantiza que cualquier cambio de arquitectura de modelo no lo afecte.
+**Arquitectura hexagonal (Ports & Adapters)**
+El use case `AnalyzeImageUseCase` solo conoce el contrato `ModelPort` (interface). El adapter concreto `VertebraPromptBoxRefinerAdapter` se inyecta en `dependencies.py`. Esto permite cambiar de modelo sin tocar el use case y testear sin cargar el modelo real.
+
+**Dispatch pattern para multi-modelo**
+El endpoint `POST /xrays` acepta un parámetro `model` (form). En `dependencies.py`, la función `get_model_dispatch()` retorna un `dict[ModelName, ModelPort]` que mapea cada nombre a su adapter. Para añadir un modelo nuevo: registrar el enum, cargar el adapter, mapearlo en el dict. El router queda cerrado a modificación.
+
+**Preprocesamiento dentro del adapter (no en el use case)**
+El use case solo valida el formato y entrega la imagen RGB cruda al adapter. El adapter aplica el preprocesamiento exacto del notebook 06 (resize a 1024×1024 con BILINEAR + normalización por percentiles 1/99.5), evitando la divergencia que existía cuando el use case aplicaba CLAHE+letterbox que el modelo nunca vio en training.
 
 **`run_in_executor` en el adapter**
-PyTorch en CPU bloquea ~3 segundos durante la inferencia. Sin `run_in_executor`, el event loop de uvicorn no puede responder otros requests (`/health`, `/export`) durante ese tiempo.
+PyTorch en CPU bloquea varios segundos durante la inferencia. Sin `run_in_executor`, el event loop de uvicorn no puede responder otros requests (`/health`, `/export`) durante ese tiempo.
 
 **`@lru_cache` en las dependencias**
-Garantiza que el modelo (~500 MB en memoria) se cargue una sola vez al arrancar, independientemente de cuántos requests simultáneos lleguen.
+Garantiza que las 4 redes (~2 GB en memoria) se carguen una sola vez al primer request, independientemente de cuántos requests simultáneos lleguen.
 
 **`InMemoryStorageAdapter` con límite de 100 entradas**
 Para MVP sin base de datos. El límite previene memory leaks. Migrar a Redis o S3 solo requiere implementar un nuevo adapter que cumpla `StoragePort`.
@@ -235,7 +304,7 @@ Para MVP sin base de datos. El límite previene memory leaks. Migrar a Redis o S
 
 1. Crear rama: `git checkout -b feature/nombre-feature`
 2. Ejecutar pruebas antes de commit: `pytest tests/ -v`
-3. Formatear código: `black app/ tests/` y `isort app/ tests/`
+3. Formatear código (si aplica): `black app/ tests/` y `isort app/ tests/`
 4. Abrir Pull Request con descripción del cambio
 
 ---

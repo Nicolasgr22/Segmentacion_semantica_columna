@@ -33,8 +33,21 @@ def dummy_image_bytes() -> bytes:
 
 @pytest.fixture
 def small_image_bytes() -> bytes:
+    """Imagen pequeña pero válida (256×256). Debe ser ACEPTADA por el endpoint:
+    el adapter reescala internamente al tamaño que necesita."""
     img = Image.fromarray(
         np.random.randint(0, 255, (256, 256, 3), dtype=np.uint8)
+    )
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@pytest.fixture
+def tiny_image_bytes() -> bytes:
+    """Imagen demasiado pequeña (16×16). Debe ser RECHAZADA por el endpoint."""
+    img = Image.fromarray(
+        np.random.randint(0, 255, (16, 16, 3), dtype=np.uint8)
     )
     buf = io.BytesIO()
     img.save(buf, format="PNG")

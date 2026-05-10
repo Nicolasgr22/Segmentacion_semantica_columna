@@ -1,7 +1,12 @@
 // VertebraAI – Pantalla principal
-// Material Design 3 dark mode, paleta tech-medical (azules eléctricos rayos X)
+// Conectada al backend FastAPI: POST /api/vertebraai/xrays
+// Pipeline ganador notebook 06: VertebraPrompt-Net + BoxRefiner + MedSAM
 
 const { useState, useEffect, useRef, useCallback } = React;
+
+// ───────────────────────── Configuración del backend ─────────────────────────
+const BACKEND_URL = window.BACKEND_URL || 'http://localhost:8000';
+const API_BASE = `${BACKEND_URL}/api/vertebraai`;
 
 // ───────────────────────── Iconos (Material-style outline) ─────────────────────────
 const Icon = ({ name, size = 24, ...props }) => {
@@ -23,6 +28,7 @@ const Icon = ({ name, size = 24, ...props }) => {
     spine: 'M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4M9 7v2h6V7zm-1 4v2h8v-2zm-1 4v2h10v-2zm-1 4v2h12v-2z',
     layers: 'm12 16 7-4-2-1-5 3-5-3-2 1zm0-4 7-4-7-4-7 4zm0 8 7-4-2-1-5 3-5-3-2 1z',
     tune: 'M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z',
+    error: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8',
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -32,7 +38,7 @@ const Icon = ({ name, size = 24, ...props }) => {
 };
 
 // ───────────────────────── App Bar ─────────────────────────
-function AppBar({ onReset, onToggleTheme, theme }) {
+function AppBar({ onReset, onToggleTheme, theme, modelVersion }) {
   return (
     <header className="appbar">
       <div className="appbar-left">
@@ -50,20 +56,13 @@ function AppBar({ onReset, onToggleTheme, theme }) {
         </div>
         <div className="appbar-titles">
           <h1>VertebraAI</h1>
-          <span className="appbar-subtitle">Segmentación de columna · v2.4</span>
+          <span className="appbar-subtitle">{modelVersion || 'Segmentación de columna'}</span>
         </div>
       </div>
 
-      <nav className="appbar-nav">
-        <a className="active" href="#">Análisis</a>
-        <a href="#">Historial</a>
-        <a href="#">Modelo</a>
-        <a href="#">Ayuda</a>
-      </nav>
-
       <div className="appbar-right">
         <span className="status-pill">
-          <span className="status-dot" /> Modelo activo
+          <span className="status-dot" /> {modelVersion ? 'Modelo conectado' : 'Conectando…'}
         </span>
         <button className="icon-btn" onClick={onToggleTheme} title="Cambiar tema">
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
@@ -71,7 +70,6 @@ function AppBar({ onReset, onToggleTheme, theme }) {
         <button className="icon-btn" onClick={onReset} title="Nueva sesión">
           <Icon name="refresh" size={20} />
         </button>
-        <div className="avatar">DR</div>
       </div>
     </header>
   );
@@ -83,8 +81,8 @@ function UploadZone({ onUpload }) {
   const fileInput = useRef(null);
 
   const handleFile = (file) => {
-    // En este prototipo, cualquier archivo "pasa" — disparamos el flujo demo
-    onUpload(file ? file.name : 'columna_lateral_001.png');
+    if (!file) return;
+    onUpload(file);
   };
 
   return (
@@ -103,7 +101,7 @@ function UploadZone({ onUpload }) {
         <input
           ref={fileInput}
           type="file"
-          accept="image/png"
+          accept="image/png,image/jpeg"
           style={{ display: 'none' }}
           onChange={(e) => handleFile(e.target.files[0])}
         />
@@ -125,9 +123,9 @@ function UploadZone({ onUpload }) {
         </button>
 
         <ul className="upload-meta">
-          <li>Formato: <b>PNG</b></li>
-          <li>Resolución mínima: <b>512 × 512 px</b></li>
-          <li>Vista: <b>Lateral / AP</b></li>
+          <li>Formato: <b>PNG / JPEG</b></li>
+          <li>Resolución mínima: <b>32 × 32 px</b></li>
+          <li>Vista: <b>AP</b></li>
         </ul>
       </div>
 
@@ -138,14 +136,13 @@ function UploadZone({ onUpload }) {
             <span>Sobre el modelo</span>
           </div>
           <p>
-            Red neuronal U-Net 3D entrenada sobre <b>14.382 estudios</b> anotados
-            por radiólogos certificados. Detecta y segmenta vértebras
-            cervicales, torácicas y lumbares.
+            Pipeline 3-stage: <b>VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B</b>.
+            Detecta y segmenta hasta 22 vértebras (C3–L5) en radiografías AP.
           </p>
           <div className="kpi-row">
-            <div><span>Dice</span><b>0.943</b></div>
-            <div><span>IoU</span><b>0.892</b></div>
-            <div><span>Latencia</span><b>~3.2 s</b></div>
+            <div><span>Dice estricto</span><b>0.553</b></div>
+            <div><span>Dice flexible</span><b>0.768</b></div>
+            <div><span>IoU estricto</span><b>0.479</b></div>
           </div>
         </div>
 
@@ -167,41 +164,41 @@ function UploadZone({ onUpload }) {
 
 // ───────────────────────── Pantalla de procesamiento ─────────────────────────
 const PROCESS_STEPS = [
-  'Decodificando PNG',
-  'Normalizando intensidad',
-  'Localizando columna vertebral',
-  'Segmentando vértebras',
-  'Etiquetando regiones',
-  'Calculando métricas',
+  'Decodificando imagen',
+  'Resize 1024 + percentiles',
+  'VertebraPrompt-Net',
+  'BoxRefiner',
+  'MedSAM por caja',
+  'Composición y métricas',
 ];
 
-function ProcessingScreen({ filename, onDone }) {
+function ProcessingScreen({ filename, fileUrl }) {
+  // Avance suave de UI mientras se espera la respuesta del backend
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const totalMs = 4200;
+    // El backend puede tardar varios segundos. Mostramos avance estimado.
     const interval = setInterval(() => {
       setProgress((p) => {
-        const next = p + 100 / (totalMs / 60);
-        if (next >= 100) {
-          clearInterval(interval);
-          setTimeout(onDone, 250);
-          return 100;
-        }
+        // Curva asintótica: avanza rápido al inicio y desacelera cerca del 90%
+        const next = p + (90 - p) * 0.05;
         setStep(Math.min(PROCESS_STEPS.length - 1, Math.floor((next / 100) * PROCESS_STEPS.length)));
         return next;
       });
-    }, 60);
+    }, 200);
     return () => clearInterval(interval);
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="processing">
       <div className="processing-stage">
         <div className="scan-frame">
           <div className="scan-svg">
-            <XrayImage noiseOpacity={0.5} />
+            {fileUrl
+              ? <img src={fileUrl} alt="Radiografía" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : null
+            }
           </div>
           <div className="scan-line" />
           <div className="scan-grid" />
@@ -244,17 +241,32 @@ function ProcessingScreen({ filename, onDone }) {
   );
 }
 
+// ───────────────────────── Pantalla de error ─────────────────────────
+function ErrorScreen({ error, onRetry }) {
+  return (
+    <div className="processing">
+      <div className="processing-stage" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 24 }}>
+        <div style={{ color: '#ff5252' }}>
+          <Icon name="error" size={64} />
+        </div>
+        <h2 style={{ margin: 0 }}>Error en el análisis</h2>
+        <p className="filename" style={{ maxWidth: 480 }}>{error}</p>
+        <button className="btn-tonal" onClick={onRetry}>
+          <Icon name="refresh" size={18} /> Intentar de nuevo
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────── Vista de resultados ─────────────────────────
-function ResultView({ filename, onNew }) {
+function ResultView({ result, fileUrl, filename, onNew }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [hoveredId, setHoveredId] = useState(null);
-  const [showLabels, setShowLabels] = useState(true);
-  const [colorMode, setColorMode] = useState('region');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const stageRef = useRef(null);
 
   const handleWheel = (e) => {
     e.preventDefault();
@@ -276,7 +288,6 @@ function ResultView({ filename, onNew }) {
     });
   };
   const onMouseUp = () => setIsPanning(false);
-
   const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
   // Slider handle drag
@@ -302,16 +313,38 @@ function ResultView({ filename, onNew }) {
     };
   }, []);
 
-  // Métricas de demo
-  const metrics = {
-    detected: 24,
-    expected: 24,
-    confidence: 0.946,
-    cervical: { count: 7, conf: 0.962 },
-    thoracic: { count: 12, conf: 0.948 },
-    lumbar: { count: 5, conf: 0.921 },
-    processingMs: 3210,
+  // Datos REALES del backend
+  const { metrics, vertebrae, mask, processing, study_id, timestamp } = result;
+  const maskUrl = `data:image/png;base64,${mask.data}`;
+
+  // Mapeo región → color (alineado con backend _REGION_COLORS)
+  const regionColors = {
+    cervical: '#4285F4',
+    thoracic: '#34A853',
+    lumbar:   '#EA4335',
   };
+
+  // Etiquetas de regiones para mostrar (sin C1/C2 — backend solo C3-C7)
+  const regionInfo = [
+    { key: 'cervical', label: 'Cervical', range: 'C3 – C7' },
+    { key: 'thoracic', label: 'Torácica', range: 'T1 – T12' },
+    { key: 'lumbar',   label: 'Lumbar',   range: 'L1 – L5' },
+  ];
+
+  // Descarga de exports vía endpoint del backend
+  const downloadExport = (format) => {
+    const url = `${API_BASE}/xrays/${study_id}/exports/${format}`;
+    window.open(url, '_blank');
+  };
+
+  // Formatear timestamp
+  const formattedTime = (() => {
+    try {
+      return new Date(timestamp).toLocaleString();
+    } catch {
+      return timestamp;
+    }
+  })();
 
   return (
     <div className="result-shell">
@@ -326,30 +359,6 @@ function ResultView({ filename, onNew }) {
         </div>
 
         <div className="result-tools">
-          <div className="seg-control">
-            <label>Color</label>
-            <div className="seg-buttons">
-              {[
-                { v: 'region', label: 'Región' },
-                { v: 'gradient', label: 'Gradiente' },
-                { v: 'unique', label: 'Único' },
-                { v: 'mono', label: 'Mono' },
-              ].map((o) => (
-                <button
-                  key={o.v}
-                  className={colorMode === o.v ? 'active' : ''}
-                  onClick={() => setColorMode(o.v)}
-                >{o.label}</button>
-              ))}
-            </div>
-          </div>
-          <button
-            className={`tool-btn ${showLabels ? 'on' : ''}`}
-            onClick={() => setShowLabels((s) => !s)}
-            title="Etiquetas"
-          >
-            <Icon name="layers" size={18} /> Etiquetas
-          </button>
           <div className="zoom-cluster">
             <button className="icon-btn" onClick={() => setZoom((z) => Math.max(0.5, z - 0.2))}>
               <Icon name="zoom_out" size={18} />
@@ -362,7 +371,7 @@ function ResultView({ filename, onNew }) {
               <Icon name="fit" size={18} />
             </button>
           </div>
-          <button className="btn-filled" title="Descargar">
+          <button className="btn-filled" onClick={() => downloadExport('overlay')} title="Descargar overlay">
             <Icon name="download" size={18} /> Exportar
           </button>
         </div>
@@ -372,7 +381,6 @@ function ResultView({ filename, onNew }) {
         {/* Stage central */}
         <div
           className="stage"
-          ref={stageRef}
           onWheel={handleWheel}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
@@ -380,44 +388,47 @@ function ResultView({ filename, onNew }) {
           onMouseLeave={onMouseUp}
           style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
         >
-          {/* Reglas */}
-          <div className="ruler ruler-top">
-            {Array.from({ length: 21 }).map((_, i) => (
-              <span key={i} className={i % 5 === 0 ? 'major' : ''} />
-            ))}
-          </div>
-          <div className="ruler ruler-left">
-            {Array.from({ length: 31 }).map((_, i) => (
-              <span key={i} className={i % 5 === 0 ? 'major' : ''} />
-            ))}
-          </div>
-
-          {/* Comparador slider */}
+          {/* Comparador slider con imagen REAL + máscara REAL.
+              Aspect-ratio dinámico basado en las dimensiones de la máscara
+              que devolvió el backend (mantiene proporciones de la radiografía). */}
           <div
             className="comparator"
             ref={sliderRef}
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              aspectRatio: `${mask.dimensions.width} / ${mask.dimensions.height}`,
             }}
           >
             <div className="layer xray-layer">
-              <XrayImage noiseOpacity={0.35} />
+              <img
+                src={fileUrl}
+                alt="Radiografía original"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+              />
             </div>
 
             <div
               className="layer mask-layer"
               style={{ clipPath: `inset(0 0 0 ${sliderPos}%)` }}
             >
-              <div className="mask-inner">
-                <XrayImage noiseOpacity={0.25} />
-                <div className="mask-overlay">
-                  <SegmentationMask
-                    showLabels={showLabels}
-                    hoveredId={hoveredId}
-                    onHover={setHoveredId}
-                    colorMode={colorMode}
-                  />
-                </div>
+              <div className="mask-inner" style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <img
+                  src={fileUrl}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+                <img
+                  src={maskUrl}
+                  alt="Máscara segmentada"
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    objectFit: 'contain',
+                    mixBlendMode: 'screen',
+                    opacity: 0.75,
+                    display: 'block',
+                  }}
+                />
               </div>
             </div>
 
@@ -437,22 +448,22 @@ function ResultView({ filename, onNew }) {
             </div>
           </div>
 
-          {/* HUD esquinas */}
+          {/* HUD esquinas — solo datos REALES del backend */}
           <div className="hud hud-tl mono">
-            <div>STUDY · 2026-04-28 14:32</div>
-            <div>VIEW · LATERAL</div>
+            <div>STUDY · {formattedTime}</div>
+            <div>ID · {study_id.slice(0, 8)}</div>
           </div>
           <div className="hud hud-tr mono">
-            <div>U-Net 3D · v2.4.1</div>
-            <div>Conf {Math.round(metrics.confidence * 1000) / 10}%</div>
+            <div>{metrics.model_metrics.model_version}</div>
+            <div>Conf {(metrics.confidence * 100).toFixed(1)}%</div>
           </div>
           <div className="hud hud-bl mono">
-            <div>kVp 75 · mA 320</div>
-            <div>1024 × 2304 px</div>
+            <div>Dice {metrics.model_metrics.dice.toFixed(3)} · IoU {metrics.model_metrics.iou.toFixed(3)}</div>
+            <div>{mask.dimensions.width} × {mask.dimensions.height} px</div>
           </div>
           <div className="hud hud-br mono">
             <div>{Math.round(zoom * 100)}% · ({pan.x}, {pan.y})</div>
-            <div>RGBA · 16-bit</div>
+            <div>{metrics.model_metrics.latency_ms.toFixed(0)} ms inferencia</div>
           </div>
         </div>
 
@@ -461,11 +472,12 @@ function ResultView({ filename, onNew }) {
           <section className="panel-card">
             <header>
               <h3>Resultados</h3>
-              <span className="chip mono">{(metrics.processingMs / 1000).toFixed(2)}s</span>
+              <span className="chip mono">{(processing.total_time_ms / 1000).toFixed(2)}s</span>
             </header>
             <div className="big-stat">
               <div className="big-stat-value">
-                {metrics.detected}<span>/{metrics.expected}</span>
+                {metrics.detected_count}
+                <span>/{vertebrae.length}</span>
               </div>
               <div className="big-stat-label">Vértebras detectadas</div>
             </div>
@@ -483,35 +495,41 @@ function ResultView({ filename, onNew }) {
           <section className="panel-card">
             <header><h3>Por región</h3></header>
             <ul className="region-list">
-              {[
-                { key: 'cervical', label: 'Cervical', range: 'C1 – C7', dot: '#4FC3F7', ...metrics.cervical },
-                { key: 'thoracic', label: 'Torácica', range: 'T1 – T12', dot: '#80D8FF', ...metrics.thoracic },
-                { key: 'lumbar',   label: 'Lumbar',   range: 'L1 – L5',  dot: '#00E5A0', ...metrics.lumbar },
-              ].map((r) => (
-                <li key={r.key}>
-                  <span className="region-dot" style={{ background: r.dot }} />
-                  <div className="region-text">
-                    <b>{r.label}</b>
-                    <span className="mono">{r.range}</span>
-                  </div>
-                  <div className="region-stats">
-                    <span className="mono"><b>{r.count}</b> v.</span>
-                    <span className="mono dim">{(r.conf * 100).toFixed(1)}%</span>
-                  </div>
-                </li>
-              ))}
+              {regionInfo.map((r) => {
+                const data = metrics.by_region[r.key];
+                if (!data) return null;
+                return (
+                  <li key={r.key}>
+                    <span className="region-dot" style={{ background: regionColors[r.key] }} />
+                    <div className="region-text">
+                      <b>{r.label}</b>
+                      <span className="mono">{r.range}</span>
+                    </div>
+                    <div className="region-stats">
+                      <span className="mono">
+                        <b>{data.detected_count}</b>/{data.expected_count}
+                      </span>
+                      <span className="mono dim">{(data.mean_confidence * 100).toFixed(1)}%</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
           <section className="panel-card">
             <header><h3>Vértebras</h3></header>
             <div className="vert-grid">
-              {VERTEBRAE.map((v) => (
+              {vertebrae.map((v) => (
                 <button
                   key={v.id}
-                  className={`vert-chip ${v.region} ${hoveredId === v.id ? 'on' : ''}`}
+                  className={`vert-chip ${v.region} ${hoveredId === v.id ? 'on' : ''} ${!v.detected ? 'missing' : ''}`}
                   onMouseEnter={() => setHoveredId(v.id)}
                   onMouseLeave={() => setHoveredId(null)}
+                  title={v.detected
+                    ? `${v.label} · ${(v.confidence * 100).toFixed(1)}% · ${v.pixel_count} px`
+                    : `${v.label} · no detectada`
+                  }
                 >{v.label}</button>
               ))}
             </div>
@@ -520,10 +538,18 @@ function ResultView({ filename, onNew }) {
           <section className="panel-card">
             <header><h3>Exportar</h3></header>
             <div className="export-buttons">
-              <button className="btn-outline"><Icon name="download" size={16} /> PNG</button>
-              <button className="btn-outline"><Icon name="download" size={16} /> Máscara</button>
-              <button className="btn-outline"><Icon name="download" size={16} /> Overlay</button>
-              <button className="btn-outline"><Icon name="download" size={16} /> Reporte</button>
+              <button className="btn-outline" onClick={() => downloadExport('png')}>
+                <Icon name="download" size={16} /> Original
+              </button>
+              <button className="btn-outline" onClick={() => downloadExport('mask')}>
+                <Icon name="download" size={16} /> Máscara
+              </button>
+              <button className="btn-outline" onClick={() => downloadExport('overlay')}>
+                <Icon name="download" size={16} /> Overlay
+              </button>
+              <button className="btn-outline" onClick={() => downloadExport('report')}>
+                <Icon name="download" size={16} /> Reporte
+              </button>
             </div>
           </section>
 
@@ -542,21 +568,69 @@ const TWEAK_DEFAULS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 function App() {
-  const [phase, setPhase] = useState('upload'); // upload | processing | result
+  const [phase, setPhase] = useState('upload');     // upload | processing | result | error
   const [filename, setFilename] = useState('');
+  const [fileUrl, setFileUrl] = useState(null);     // URL local de la imagen subida
+  const [result, setResult] = useState(null);       // Respuesta del backend
+  const [error, setError] = useState(null);
+  const [modelVersion, setModelVersion] = useState(null);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULS);
 
   useEffect(() => {
     document.documentElement.dataset.theme = tweaks.theme;
   }, [tweaks.theme]);
 
-  const start = (name) => {
-    setFilename(name);
+  // Health check inicial para mostrar versión del modelo
+  useEffect(() => {
+    fetch(`${API_BASE}/health`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setModelVersion(data.model_version); })
+      .catch(() => {/* silencioso: el AppBar mostrará "Conectando…" */});
+  }, []);
+
+  const start = async (file) => {
+    setFilename(file.name);
+    const localUrl = URL.createObjectURL(file);
+    setFileUrl(localUrl);
     setPhase('processing');
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('model', 'medsam');
+
+      const response = await fetch(`${API_BASE}/xrays`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const errBody = await response.json();
+          message = errBody.detail || errBody.error || message;
+        } catch {/* sin cuerpo JSON */}
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      setResult(data);
+      setPhase('result');
+    } catch (err) {
+      console.error('Error en análisis:', err);
+      setError(err.message || 'No se pudo conectar con el servicio');
+      setPhase('error');
+    }
   };
+
   const reset = () => {
+    if (fileUrl) URL.revokeObjectURL(fileUrl);
     setPhase('upload');
     setFilename('');
+    setFileUrl(null);
+    setResult(null);
+    setError(null);
   };
 
   return (
@@ -565,19 +639,21 @@ function App() {
         onReset={reset}
         onToggleTheme={() => setTweak('theme', tweaks.theme === 'dark' ? 'light' : 'dark')}
         theme={tweaks.theme}
+        modelVersion={modelVersion}
       />
 
       <main className="main">
         {phase === 'upload' && <UploadZone onUpload={start} />}
-        {phase === 'processing' && (
-          <ProcessingScreen filename={filename} onDone={() => setPhase('result')} />
+        {phase === 'processing' && <ProcessingScreen filename={filename} fileUrl={fileUrl} />}
+        {phase === 'error' && <ErrorScreen error={error} onRetry={reset} />}
+        {phase === 'result' && result && (
+          <ResultView result={result} fileUrl={fileUrl} filename={filename} onNew={reset} />
         )}
-        {phase === 'result' && <ResultView filename={filename} onNew={reset} />}
       </main>
 
       <footer className="app-footer mono">
         <span>VertebraAI · Apoyo diagnóstico — no sustituye criterio clínico</span>
-        <span>HIPAA · ISO 13485</span>
+        <span>Pipeline: VertebraPrompt + BoxRefiner + MedSAM</span>
       </footer>
 
       <TweaksPanel title="Tweaks">

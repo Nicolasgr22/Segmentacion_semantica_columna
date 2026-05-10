@@ -47,23 +47,40 @@ async def test_execute_raises_on_invalid_bytes(mock_model_port, mock_storage_por
 
 
 @pytest.mark.asyncio
-async def test_execute_raises_on_small_image(
+async def test_execute_accepts_small_image(
     small_image_bytes, mock_model_port, mock_storage_port
 ):
+    """El adapter reescala internamente; imágenes <512 px ya NO se rechazan."""
     use_case = AnalyzeImageUseCase(model=mock_model_port, storage=mock_storage_port)
-    with pytest.raises(InvalidImageError, match="512"):
-        await use_case.execute(small_image_bytes, "small.png")
+    result = await use_case.execute(small_image_bytes, "small.png")
+    assert isinstance(result, VertebraAnalysis)
+
+
+@pytest.mark.asyncio
+async def test_execute_raises_on_tiny_image(
+    tiny_image_bytes, mock_model_port, mock_storage_port
+):
+    """Mínimo razonable: 32×32 px. Debajo de eso (thumbnails, errores) → 400."""
+    use_case = AnalyzeImageUseCase(model=mock_model_port, storage=mock_storage_port)
+    with pytest.raises(InvalidImageError, match="32"):
+        await use_case.execute(tiny_image_bytes, "tiny.png")
 
 
 @pytest.mark.asyncio
 async def test_processing_steps_recorded(
     dummy_image_bytes, mock_model_port, mock_storage_port
 ):
+    """Verifica que se reportan las etapas del pipeline ganador del notebook 06.
+    El use case ya no aplica CLAHE/letterbox: el adapter hace el preprocesamiento
+    exacto del notebook (resize 1024 + percentiles 1/99.5)."""
     use_case = AnalyzeImageUseCase(model=mock_model_port, storage=mock_storage_port)
     result = await use_case.execute(dummy_image_bytes, "test.png")
     steps_str = " ".join(result.processing_steps)
-    assert "CLAHE" in steps_str
-    assert "SegFormer-B2" in steps_str
+    assert "Decodificación" in steps_str
+    assert "percentiles" in steps_str.lower()
+    assert "VertebraPrompt-Net" in steps_str
+    assert "BoxRefiner" in steps_str
+    assert "MedSAM" in steps_str
 
 
 @pytest.mark.asyncio

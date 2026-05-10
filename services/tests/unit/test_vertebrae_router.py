@@ -33,7 +33,7 @@ def test_create_analysis_vertebrae_count_is_22(test_client, dummy_image_bytes):
     assert len(response.json()["vertebrae"]) == 22
 
 
-def test_create_analysis_rejects_jpeg(test_client):
+def test_create_analysis_accepts_jpeg(test_client):
     img = Image.fromarray(np.zeros((512, 512, 3), dtype=np.uint8))
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
@@ -41,13 +41,35 @@ def test_create_analysis_rejects_jpeg(test_client):
         _XRAYS_URL,
         files={"file": ("test.jpg", buf.getvalue(), "image/jpeg")},
     )
+    assert response.status_code == 201
+
+
+def test_create_analysis_rejects_unsupported_format(test_client):
+    """Otros formatos (BMP, GIF, etc.) deben seguir siendo rechazados."""
+    img = Image.fromarray(np.zeros((512, 512, 3), dtype=np.uint8))
+    buf = io.BytesIO()
+    img.save(buf, format="BMP")
+    response = test_client.post(
+        _XRAYS_URL,
+        files={"file": ("test.bmp", buf.getvalue(), "image/bmp")},
+    )
     assert response.status_code == 400
 
 
-def test_create_analysis_rejects_small_image(test_client, small_image_bytes):
+def test_create_analysis_accepts_small_image(test_client, small_image_bytes):
+    """El adapter reescala internamente; ya no rechazamos por <512 px."""
     response = test_client.post(
         _XRAYS_URL,
         files={"file": ("small.png", small_image_bytes, "image/png")},
+    )
+    assert response.status_code == 201
+
+
+def test_create_analysis_rejects_tiny_image(test_client, tiny_image_bytes):
+    """Pero imágenes triviales (<32 px) sí se rechazan."""
+    response = test_client.post(
+        _XRAYS_URL,
+        files={"file": ("tiny.png", tiny_image_bytes, "image/png")},
     )
     assert response.status_code == 400
 

@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing y coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Dev / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment files (no copiar secretos al build)
+.env
+.env.local
+*.env
+
+# Documentación que no necesita la imagen
+*.md
+docs/
+
+# Logs
+*.log
+logs/
+
+# Tests (no se ejecutan dentro del contenedor)
+tests/
+
+# Archivos del proyecto fuera del scope del runtime
+notebooks/
+package-src/

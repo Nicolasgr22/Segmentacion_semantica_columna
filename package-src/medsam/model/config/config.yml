@@ -1,55 +1,245 @@
-model:
-  checkpoint: "vit_b"                  # SAM registry key
-  img_size: 1024                        # SAM input resolution
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ Configuración del pipeline ganador (notebooks 05 + 06)                   ║
+# ║                                                                            ║
+# ║ Pipeline de 4 etapas secuenciales:                                        ║
+# ║   1. CenterNetLite         → cajas base por vértebra                      ║
+# ║   2. VertebraPromptNet     → CenterNetLite + cabeza class_heat anatómica ║
+# ║   3. BoxRefiner            → ajusta cajas (dx, dy, dw, dh)               ║
+# ║   4. MedSAM ViT-B 2 fases  → segmenta cada vértebra individualmente      ║
+# ║                                                                            ║
+# ║ Métricas objetivo (test, según notebook 06):                             ║
+# ║   - Dice estricto:  0.5530 (per-vertebra con etiqueta correcta)         ║
+# ║   - Dice flexible:  0.7678 (mejor match sin importar etiqueta)          ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
 
-training:
+# ─── Reproducibilidad ────────────────────────────────────────────────────────
+reproducibility:
   seed: 42
-  num_epochs: 20
-  batch_size: 2
-  num_workers: 0
-  box_pad: 10                           # bbox prompt padding in pixels
-  num_pos_points: 3                     # positive SAM point prompts per image
-  neg_offset: 15                        # negative point offset from bbox edge
+  cudnn_benchmark: true            # NB05/NB06 CELL 2
 
-  optimizer:
-    decoder_lr: 1e-4
-    encoder_last_block_lr: 1e-5
-    weight_decay: 1e-4
-
-  scheduler:
-    mode: "max"
-    factor: 0.5
-    patience: 3
-    threshold: 1e-3
-    min_lr: 1e-6
-
-  early_stopping:
-    patience: 5
-    min_delta: 0.001
-
-  checkpoint_name: "medsam_lastblock_unfrozen.pth"
-
+# ─── Dataset y splits ────────────────────────────────────────────────────────
 data:
-  image_size: 1024
-  min_resolution: 256                   # mínimo ancho/alto aceptado
+  img_size: 1024                   # tamaño de imagen para MedSAM (NB03 export)
+  detector_img_size: 512           # tamaño para CenterNetLite y VertebraPromptNet
+  n_clases: 17                     # T1-T12 + L1-L5
+  vertebra_names:                  # orden T1 → L5 (índices 1-17)
+    - T1
+    - T2
+    - T3
+    - T4
+    - T5
+    - T6
+    - T7
+    - T8
+    - T9
+    - T10
+    - T11
+    - T12
+    - L1
+    - L2
+    - L3
+    - L4
+    - L5
 
+# ─── Rutas relativas a model/ ────────────────────────────────────────────────
 paths:
-  # Raíz del paquete → package-src/medsam/model/
   dataset_root:    "recursos/Scoliosis_Dataset"
   splits_csv:      "recursos/dataset_procesado/splits.csv"
   sam_checkpoint:  "recursos/models/sam_vit_b_01ec64.pth"
   save_dir:        "recursos/medsam_checkpoints"
+  labels_dict:     "recursos/Scoliosis_Dataset/labels_dictionary.json"
 
   # Subcarpetas del dataset (relativas a dataset_root)
   normal:          "Normal"
   scoliosis:       "Scoliosis"
-  mask_id:         "LabelMultiClass_ID_PNG"
+  mask_id:         "LabelMultiClass_ID_PNG"     # multiclase con IDs 1-17 → T1-L5
   mask_binary:     "LabelBinaryJPG"
   metrics_json:    "RadiographMetrics/metrics_json"
-  labels_dict:     "labels_dictionary.json"
 
+# ─── STAGE 1: CenterNetLite (NB05 CELL 2) ────────────────────────────────────
+# Detector base de cajas vertebrales. 1 canal de entrada (grayscale 512x512).
+# Salida: heatmap de centros + tamaños (wh) + offsets + presencia.
+stage1_centernet:
+  base_ch: 32
+  epochs: 140
+  patience: 22
+  lr: 6.0e-4
+  batch_size: 2
+  num_workers: 0
+  weight_decay: 1.0e-4
+  augment_repeats: 6              # multiplicador de muestras por epoch
+  sigma_centro: 4.5               # gaussiana para targets de heat
+  target_box_expand_w: 1.10       # expansión cajas objetivo
+  target_box_expand_h: 1.12
+
+  # Pesos de la pérdida total (NB05 CELL 2)
+  # NOTA: usamos 'offset' en vez de 'off' porque YAML interpreta 'off' como False.
+  loss_weights:
+    heat: 1.00
+    wh: 0.40
+    offset: 0.12
+    presence: 0.00
+
+  checkpoint_name: "centernet_lite_best.pt"
+
+# ─── STAGE 2: VertebraPromptNet (NB06 CELL 2) ────────────────────────────────
+# Misma arquitectura U-Net que CenterNetLite + cabeza class_heat (17 canales).
+# Carga pesos de Stage 1, congela el detector base, entrena solo identidad.
+stage2_vertebra_prompt:
+  base_ch: 32
+  epochs: 60
+  patience: 10
+  lr: 3.0e-4
+  batch_size: 2
+  num_workers: 0
+  weight_decay: 1.0e-4
+  augment_repeats: 6
+  sigma_centro: 4.5
+  box_expand_w: 1.12
+  box_expand_h: 1.12
+
+  # Carga el checkpoint del Stage 1 y congela el detector base
+  load_baseline_centernet: true
+  freeze_detector_train_only_identity: true
+
+  # Pesos de pérdida (NB06 CELL 2 — añade class_heat)
+  loss_weights:
+    heat: 1.00
+    wh: 0.40
+    offset: 0.12                  # 'off' es palabra reservada en YAML
+    presence: 0.00
+    class_heat: 0.08              # heatmap anatómico por vértebra
+
+  checkpoint_name: "vertebra_prompt_net_best.pt"
+
+# ─── STAGE 3: BoxRefiner (NB06 CELL 2) ───────────────────────────────────────
+# CNN pequeña que ajusta deltas de cajas detectadas.
+# Input: crop 192x192 + máscara de la caja predicha (2 canales).
+# Output: [dx, dy, dw, dh] con tanh acotados.
+stage3_box_refiner:
+  enabled: true
+  apply_to_medsam: true           # las cajas refinadas alimentan MedSAM
+  size: 192                       # tamaño del crop
+  batch_size: 32
+  epochs: 55
+  patience: 9
+  lr: 5.0e-4
+  weight_decay: 1.0e-4
+  context_frac: 0.85              # contexto alrededor de la caja
+  blend: 0.80                     # factor de mezcla de la predicción
+  min_iou_target: 0.08            # threshold para seleccionar targets
+  min_recall_target: 0.35
+  max_abs_dxy: 0.45               # máximo desplazamiento de centro
+  max_abs_log_scale: 0.45         # máximo cambio de escala
+  checkpoint_name: "box_refiner_best.pt"
+
+# ─── STAGE 4: MedSAM 2 fases (NB05 + NB06 CELL 2) ───────────────────────────
+# Dataset multi-vertebra: 1 sample = 1 imagen + 1 vértebra + 1 caja + 1 mask binaria.
+# Entrenamiento en 2 fases secuenciales:
+#   4a. Solo decoder        (12 epochs, lr 1e-4)
+#   4b. Decoder + último bloque encoder (8 epochs, lr_decoder 5e-5, lr_encoder 1e-5)
+stage4_medsam:
+  base_checkpoint: "vit_b"        # SAM registry key
+  img_size: 1024
+  batch_size: 2
+  num_workers: 0
+
+  # Expansión fraccional de la caja como prompt (NB06 CELL 2)
+  prompt_box_frac_x: 0.04         # MEDSAM_TRAIN_FRAC_X
+  prompt_box_frac_y: 0.06         # MEDSAM_TRAIN_FRAC_Y
+  prompt_mode: "box_only"         # NB06 confirmó: box_only > box+points
+
+  # Fase 4a: solo decoder
+  decoder:
+    epochs: 12
+    patience: 4
+    lr: 1.0e-4
+    weight_decay: 1.0e-4
+    checkpoint_name: "medsam_decoder.pt"
+
+  # Fase 4b: decoder (lr menor) + último bloque encoder
+  encoder_parcial:
+    epochs: 8
+    patience: 3
+    lr_decoder: 5.0e-5            # MEDSAM_LR_DECODER_REFINO
+    lr_encoder: 1.0e-5            # MEDSAM_LR_ENCODER
+    weight_decay: 1.0e-4
+    checkpoint_name: "medsam_decoder_encoder_parcial.pt"
+
+  # Pesos por tipo de paciente y dificultad (NB06 CELL 2)
+  sample_weights:
+    escoliosis: 1.25              # MEDSAM_PESO_ESCOLIOSIS
+    normal: 1.00                  # MEDSAM_PESO_NORMAL
+    vertebras_dificiles:          # MEDSAM_VERTEBRAS_DIFICILES
+      - T1
+      - T2
+      - T3
+      - L4
+      - L5
+    peso_vertebra_dificil: 1.15   # MEDSAM_PESO_VERTEBRA_DIFICIL
+
+# ─── Decodificación anatómica (NB06 CELL 2) ──────────────────────────────────
+# Lógica para convertir heatmaps + cajas en una secuencia anatómica T1-L5.
+anatomical_decoder:
+  n_cajas_camino: 17              # 17 vértebras esperadas
+  etiquetado_modo: "top_anchor"   # top_anchor | bottom_anchor | auto_anchor
+  estrategias_etiquetado:
+    - top_anchor
+  auto_bottom_y_rel: 0.82
+  auto_bottom_min_extra_boxes: 4
+  presence_thr: 0.35
+  usar_presence_en_decodificacion: false
+  min_visible_labels: 8           # mínimo de vértebras visibles en GT
+  max_candidatos: 120
+  top_picos: 90
+  min_dist_picos: 8
+  y_min_anatomico_margen: 0.06
+  craneo_score_factor: 0.12       # penalización para cabeza
+  max_gap_rel_dy: 2.40            # gap máximo relativo entre vértebras
+  usar_class_heat_en_decodificacion: false
+  class_heat_blend: 0.00
+  class_shift_penalty: 0.025
+  class_out_of_range_penalty: 1.50
+  shifts_decodificacion_nn: [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+
+# ─── Métricas de evaluación (NB06) ───────────────────────────────────────────
+metrics:
+  binary_threshold: 0.5            # sigmoid threshold para máscaras
+  # Métrica estricta: por etiqueta exacta (T1 vs T1, T2 vs T2, ...)
+  # Métrica flexible: cada vértebra GT se compara con la mejor predicción
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ LEGACY (DEPRECATED) — usado por train.py / train_runner.py actuales      ║
+# ║ Se mantiene mientras se ejecuta el refactor por fases.                   ║
+# ║ Será eliminado cuando Stage 4 (MedSAM 2 fases) reemplace el train.py.   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+training:
+  seed: 42
+  num_epochs: 20                  # legacy: entrenamiento en 1 fase de 20 ep
+  batch_size: 2
+  num_workers: 0
+  box_pad: 10                     # padding en pixels (legacy fijo, NB06 usa fraccional)
+  num_pos_points: 3               # legacy: puntos positivos (NB06 usa box_only)
+  neg_offset: 15                  # legacy: offset puntos negativos
+  optimizer:
+    decoder_lr: 1.0e-4
+    encoder_last_block_lr: 1.0e-5
+    weight_decay: 1.0e-4
+  scheduler:
+    mode: "max"
+    factor: 0.5
+    patience: 3
+    threshold: 1.0e-3
+    min_lr: 1.0e-6
+  early_stopping:
+    patience: 5
+    min_delta: 0.001
+  checkpoint_name: "medsam_lastblock_unfrozen.pth"
+
+# ─── MLflow ──────────────────────────────────────────────────────────────────
 mlflow:
-  run_name: "exp_final_lastblock_unfrozen"
+  run_name: "pipeline_vertebraprompt_boxrefiner_medsam"
   params:
-    model: "MedSAM-ViT-B"
-    estrategia: "lastblock_encoder_unfrozen"
+    model: "VertebraPromptNet+BoxRefiner+MedSAM-ViT-B"
+    estrategia: "ganadora_notebook_06"
+    arquitectura: "3_etapas_cascada"

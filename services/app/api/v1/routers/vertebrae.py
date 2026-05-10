@@ -9,7 +9,7 @@ from app.config import settings
 from app.core.domain.ports.model_port import ModelPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase, InvalidImageError
-from app.dependencies import get_model_registry, get_storage_adapter
+from app.dependencies import get_model_dispatch, get_storage_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -28,24 +28,25 @@ router = APIRouter(prefix="/xrays", tags=["xrays"])
     },
     summary="Crear análisis de radiografía de columna vertebral",
     description=(
-        "Recibe una imagen PNG de radiografía de columna, aplica preprocesamiento "
+        "Recibe una imagen (PNG o JPEG) de radiografía de columna, aplica preprocesamiento "
         "(CLAHE + letterbox 512×512) y retorna la segmentación de vértebras con "
         "métricas de confianza por región."
     ),
 )
 async def create_analysis(
-    file: UploadFile = File(..., description="Imagen PNG, resolución mínima 512×512 px"),
+    file: UploadFile = File(..., description="Imagen PNG o JPEG, resolución mínima 512×512 px"),
     model: ModelName = Form(
         default=ModelName.MEDSAM,
         description="Modelo de segmentación a utilizar",
     ),
-    model_registry: dict[ModelName, ModelPort] = Depends(get_model_registry),
+    model_registry: dict[ModelName, ModelPort] = Depends(get_model_dispatch),
     storage: StoragePort = Depends(get_storage_adapter),
 ) -> AnalyzeResponse:
-    if file.content_type not in ("image/png", "application/octet-stream"):
+    accepted_types = ("image/png", "image/jpeg", "image/jpg", "application/octet-stream")
+    if file.content_type not in accepted_types:
         raise HTTPException(
             status_code=400,
-            detail="Solo se aceptan imágenes en formato PNG",
+            detail="Solo se aceptan imágenes en formato PNG o JPEG",
         )
 
     model_port = model_registry.get(model)

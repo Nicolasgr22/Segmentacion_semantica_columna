@@ -5,19 +5,27 @@ from fastapi import Depends
 from app.api.v1.schemas.requests import ModelName
 from app.config import settings
 from app.core.domain.ports.model_port import ModelPort
+from app.core.domain.ports.model_registry_port import ModelRegistryPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase
 from app.core.use_cases.export_result import ExportResultUseCase
-from app.infrastructure.adapters.model.medsam_adapter import MedSAMAdapter
+from app.infrastructure.adapters.model.vertebraprompt_boxrefiner_adapter import (
+    VertebraPromptBoxRefinerAdapter,
+)
+from app.infrastructure.adapters.registry.in_memory_model_registry import (
+    InMemoryModelRegistry,
+)
 from app.infrastructure.adapters.storage.in_memory_adapter import InMemoryStorageAdapter
 
 
 @lru_cache(maxsize=1)
-def get_model_adapter() -> MedSAMAdapter:
-    adapter = MedSAMAdapter(device=settings.model_device)
+def get_model_adapter() -> VertebraPromptBoxRefinerAdapter:
+    adapter = VertebraPromptBoxRefinerAdapter(device=settings.model_device)
     adapter.load_model(
-        sam_checkpoint=settings.medsam_sam_checkpoint,
-        finetuned_checkpoint=settings.medsam_finetuned_checkpoint,
+        prompt_net_checkpoint=settings.medsam_prompt_net_checkpoint,
+        box_refiner_checkpoint=settings.medsam_box_refiner_checkpoint,
+        sam_base_checkpoint=settings.medsam_sam_checkpoint,
+        medsam_finetuned_checkpoint=settings.medsam_finetuned_checkpoint,
     )
     return adapter
 
@@ -27,31 +35,32 @@ def get_storage_adapter() -> InMemoryStorageAdapter:
     return InMemoryStorageAdapter(max_entries=100)
 
 
-def get_model_port(model: MedSAMAdapter = Depends(get_model_adapter)) -> ModelPort:
+@lru_cache(maxsize=1)
+def get_model_registry() -> InMemoryModelRegistry:
+    return InMemoryModelRegistry()
+
+
+def get_model_port(model: VertebraPromptBoxRefinerAdapter = Depends(get_model_adapter)) -> ModelPort:
     return model
 
 
-def get_model_registry(
+def get_model_registry_port(
+    registry: InMemoryModelRegistry = Depends(get_model_registry),
+) -> ModelRegistryPort:
+    return registry
+
+
+def get_model_dispatch(
     medsam: ModelPort = Depends(get_model_adapter),
 ) -> dict[ModelName, ModelPort]:
-    """Mapea cada ModelName al adapter cargado con su checkpoint de config.
+    """Mapea cada ModelName al adapter cargado.
 
-    Para activar un nuevo modelo:
-      1. Añadir sus settings en config.py
-      2. Instanciar y cargar el adapter aquí
-      3. Agregarlo al dict
+    El nombre `medsam` se conserva como alias público del pipeline ganador
+    (VertebraPrompt + BoxRefiner + MedSAM). Para añadir un nuevo modelo:
+      1. Registrar su ModelCard en InMemoryModelRegistry.
+      2. Cargar su adapter aquí y mapearlo en este dict.
     """
-    registry: dict[ModelName, ModelPort] = {
-        ModelName.MEDSAM: medsam,
-    }
-
-    # SegFormer-B2 — activar cuando se requiera segmentación multi-clase (23 clases)
-    # from app.infrastructure.adapters.model.segformer_adapter import SegFormerAdapter
-    # segformer = SegFormerAdapter(device=settings.model_device, n_classes=23)
-    # segformer.load_model(checkpoint_path="nvidia/mit-b2", local_path="")
-    # registry[ModelName.SEGFORMER_B2] = segformer
-
-    return registry
+    return {ModelName.MEDSAM: medsam}
 
 
 def get_analyze_use_case(

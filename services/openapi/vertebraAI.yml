@@ -3,17 +3,25 @@ openapi: "3.0.3"
 info:
   title: VertebraAI API
   description: |
-    Servicio de segmentación automática de columna vertebral en radiografías mediante
-    el modelo **SegFormer-B2** (`nvidia/mit-b2`) fine-tuneado sobre el dataset MaIA Scoliosis
-    con 14,382 estudios anotados por radiólogos certificados.
+    Servicio de segmentación automática de columna vertebral en radiografías.
 
-    ## Clases segmentadas (23 clases)
+    Pipeline ganador (notebook 06): **VertebraPrompt-Net → BoxRefiner → MedSAM**.
+    VertebraPrompt-Net (U-Net + cabezas tipo CenterNet) propone cajas con
+    identidad anatómica T1–L5; BoxRefiner ajusta centro y tamaño localmente;
+    MedSAM ViT-B (decoder + último bloque del encoder fine-tuneados sobre el
+    dataset MaIA Scoliosis) produce las máscaras binarias por vértebra y se
+    componen en una máscara multi-clase.
+
+    ## Clases segmentadas
     | ID | Vértebra | Región |
     |----|----------|--------|
     | 0  | background | — |
-    | 1–5 | C7, C6, C5, C4, C3 | Cervical |
+    | 1–5 | C7, C6, C5, C4, C3 | Cervical (no cubierta por el pipeline actual) |
     | 6–17 | T1–T12 | Torácica |
     | 18–22 | L1–L5 | Lumbar |
+
+    El pipeline actual cubre 17 vértebras (T1–L5). Las clases cervicales
+    aparecen en el contrato pero retornan `detected=false`.
 
     > **Aviso clínico:** Esta herramienta es un apoyo diagnóstico. Toda decisión clínica
     > debe ser revisada por un radiólogo o especialista cualificado.
@@ -33,6 +41,8 @@ tags:
     description: Radiografías de columna vertebral y sus análisis de segmentación
   - name: health
     description: Estado del servicio y del modelo
+  - name: models
+    description: Catálogo de modelos publicados y sus métricas de experimento
 
 paths:
   /api/vertebraai/xrays:
@@ -42,16 +52,18 @@ paths:
       description: |
         Recibe una imagen PNG de radiografía, aplica preprocesamiento
         (CLAHE clipLimit=2.0 + letterbox 512×512) y retorna la máscara de
-        segmentación coloreada con métricas por vértebra.
+        segmentación multi-clase con métricas por vértebra.
 
-        **Flujo interno:**
+        **Flujo interno (pipeline VertebraPrompt + BoxRefiner + MedSAM):**
         1. Validación PNG (formato + resolución mínima 512×512)
         2. CLAHE para mejorar contraste
         3. Letterbox resize a 512×512 preservando aspecto
-        4. Inferencia SegFormer-B2 → logits (B, 23, H/4, W/4)
-        5. Upsample bilinear + argmax → máscara (512, 512)
-        6. Generación de máscara coloreada por región
-        7. Cálculo de métricas por vértebra y región
+        4. VertebraPrompt-Net: heatmap de centros + cabezas wh/off → cajas T1–L5
+        5. BoxRefiner: ajuste local (dx, dy, dw, dh) sobre cada caja
+        6. MedSAM ViT-B fine-tuned: una máscara binaria por caja
+        7. Composición de máscaras binarias en máscara multi-clase
+        8. Generación de máscara coloreada por región
+        9. Cálculo de métricas por vértebra y región
       tags: [xrays]
       requestBody:
         required: true
@@ -188,9 +200,74 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
               example:
                 status: "ok"
-                model_version: "nvidia/mit-b2"
+                model_version: "vertebraprompt+boxrefiner+medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux"
                 model_loaded: true
                 uptime_s: 3600.5
+
+  /api/vertebraai/models:
+    get:
+      operationId: listModels
+      summary: Listar modelos disponibles y sus métricas
+      description: |
+        Retorna el catálogo de modelos publicados por el servicio junto con las
+        métricas obtenidas en la evaluación experimental (Dice/IoU estricto y
+        flexible) y la trazabilidad de checkpoints y notebooks.
+      tags: [models]
+      responses:
+        "200":
+          description: Lista de modelos con sus métricas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelsListResponse"
+              example:
+                count: 1
+                items:
+                  - id: "medsam"
+                    display_name: "VertebraPrompt + BoxRefiner + MedSAM"
+                    description: "Pipeline ganador del proyecto MaIA..."
+                    architecture: "VertebraPromptNet (U-Net + cabezas CenterNet) → BoxRefiner (CNN local) → MedSAM ViT-B fine-tuned"
+                    task: "instance_segmentation_vertebrae"
+                    classes: ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","L1","L2","L3","L4","L5"]
+                    metrics:
+                      - {name: "dice_strict", value: 0.5530, description: "Dice con coincidencia anatómica estricta"}
+                      - {name: "iou_strict", value: 0.4795, description: "IoU con coincidencia anatómica estricta"}
+                      - {name: "dice_flexible", value: 0.7678, description: "Dice flexible: mejor caja para cada GT"}
+                      - {name: "iou_flexible", value: 0.6615, description: "IoU flexible: mejor caja para cada GT"}
+                    dataset: "MaIA Scoliosis (split estratificado train/val/test)"
+                    notebook: "notebooks/medsam_pipeline/notebooks/06_estrategia_ganadora_vertebraprompt_boxrefiner.ipynb"
+                    status: "active"
+                    extra:
+                      baseline_comparison: "NN-SAM + MedSAM"
+                      delta_dice_strict_vs_baseline: "+0.0134"
+                      delta_dice_flexible_vs_baseline: "+0.0191"
+
+  /api/vertebraai/models/{model_id}:
+    get:
+      operationId: getModel
+      summary: Detalle de un modelo por id
+      tags: [models]
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identificador del modelo (`medsam`)
+          example: "medsam"
+      responses:
+        "200":
+          description: Detalle del modelo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelCardResponse"
+        "404":
+          description: Modelo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/vertebraai/xrays/{xray_id}/exports/{format}:
     get:
@@ -246,12 +323,101 @@ components:
   schemas:
     ModelName:
       type: string
-      enum: [medsam, segformer-b2]
+      enum: [medsam]
       default: medsam
       description: |
-        Modelo de segmentación a utilizar:
-        - `medsam`: MedSAM ViT-B fine-tuned, segmentación binaria de columna vertebral. **Disponible.**
-        - `segformer-b2`: SegFormer-B2 (`nvidia/mit-b2`), segmentación semántica multi-clase (23 clases). **Próximamente.**
+        Modelo de segmentación a utilizar.
+
+        - `medsam`: pipeline ganador VertebraPrompt-Net + BoxRefiner + MedSAM
+          ViT-B fine-tuned, segmentación multi-clase de 17 vértebras (T1–L5).
+
+        Para obtener el detalle y las métricas del modelo, consultar
+        `GET /api/vertebraai/models`.
+
+    ExperimentMetric:
+      type: object
+      required: [name, value, description]
+      properties:
+        name:
+          type: string
+          example: "dice_strict"
+          description: Identificador de la métrica (e.g. dice_strict, iou_flexible)
+        value:
+          type: number
+          format: float
+          example: 0.5530
+        description:
+          type: string
+          example: "Dice con coincidencia anatómica estricta"
+
+    ModelCardResponse:
+      type: object
+      required:
+        - id
+        - display_name
+        - description
+        - architecture
+        - task
+        - classes
+        - metrics
+        - dataset
+        - notebook
+        - status
+      properties:
+        id:
+          type: string
+          description: Identificador estable del modelo (también acepta como ModelName en POST /xrays)
+          example: "medsam"
+        display_name:
+          type: string
+          example: "VertebraPrompt + BoxRefiner + MedSAM"
+        description:
+          type: string
+        architecture:
+          type: string
+          description: Resumen textual de la arquitectura
+        task:
+          type: string
+          description: Tipo de tarea (e.g. instance_segmentation_vertebrae)
+          example: "instance_segmentation_vertebrae"
+        classes:
+          type: array
+          items:
+            type: string
+          description: Etiquetas anatómicas que segmenta el modelo
+          example: ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","L1","L2","L3","L4","L5"]
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExperimentMetric"
+          description: Métricas reportadas en la evaluación experimental
+        dataset:
+          type: string
+          example: "MaIA Scoliosis (split estratificado train/val/test)"
+        notebook:
+          type: string
+          description: Ruta al notebook que entrenó/evaluó el modelo
+        status:
+          type: string
+          enum: [active, archived]
+          description: "`active` si el modelo está cargado y servible"
+        extra:
+          type: object
+          additionalProperties:
+            type: string
+          description: Metadatos adicionales libres (deltas vs baseline, etc.)
+
+    ModelsListResponse:
+      type: object
+      required: [count, items]
+      properties:
+        count:
+          type: integer
+          example: 1
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelCardResponse"
 
     BoundingBox:
       type: object

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routers import export, health, vertebrae
+from app.api.v1.routers import export, health, models, vertebrae
 from app.config import settings
 from app.dependencies import get_model_adapter
 
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Cargando modelo MedSAM...")
+    logger.info("Cargando pipeline VertebraPrompt + BoxRefiner + MedSAM...")
     try:
         get_model_adapter()
-        logger.info("Modelo cargado correctamente.")
+        logger.info("Pipeline cargado correctamente.")
     except Exception:
         logger.exception("Error al cargar el modelo. El servicio arrancará en modo degradado.")
     yield
@@ -28,8 +28,9 @@ app = FastAPI(
     title=settings.app_name,
     description=(
         "Servicio de segmentación automática de columna vertebral en radiografías. "
-        "Utiliza SegFormer-B2 (nvidia/mit-b2) fine-tuneado sobre el dataset MaIA Scoliosis "
-        "para detectar y segmentar 22 vértebras (C3-C7, T1-T12, L1-L5). "
+        "Pipeline ganador: VertebraPrompt-Net (propuestas de cajas con identidad "
+        "anatómica T1–L5) → BoxRefiner (ajuste local) → MedSAM ViT-B fine-tuned "
+        "(decoder + último bloque del encoder ajustados). "
         "\n\n**Nota clínica:** Esta herramienta es un apoyo diagnóstico. "
         "Toda decisión clínica debe ser revisada por un especialista."
     ),
@@ -51,3 +52,4 @@ app.add_middleware(
 app.include_router(vertebrae.router, prefix="/api/vertebraai")
 app.include_router(health.router, prefix="/api/vertebraai")
 app.include_router(export.router, prefix="/api/vertebraai")
+app.include_router(models.router, prefix="/api/vertebraai")

@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
@@ -53,20 +52,20 @@ class AnalyzeImageUseCase:
         t_start = time.perf_counter()
         steps: list[str] = []
 
-        # 1. Validar imagen
+        # 1. Validar y decodificar (la imagen llega tal cual al adapter,
+        #    sin redimensionar ni CLAHE: esos pasos los hace el adapter
+        #    replicando el preprocesamiento exacto del notebook 06).
         image_rgb = self._validate_and_decode(image_bytes)
-        steps.append("Decodificación PNG")
+        steps.append("Decodificación de imagen")
 
-        # 2. Preprocesar
-        preprocessed = self._preprocess(image_rgb)
-        steps.append("CLAHE (clipLimit=2.0)")
-        steps.append("Letterbox 512×512")
-
-        # 3. Inferencia
-        model_output = await self._model.predict(preprocessed)
-        steps.append("Inferencia SegFormer-B2")
-        steps.append("Upsample logits 4×")
-        steps.append("Argmax → máscara")
+        # 2. Inferencia (el adapter aplica resize a 1024 + normalización
+        #    por percentiles 1/99.5, idéntico al notebook ganador).
+        model_output = await self._model.predict(image_rgb)
+        steps.append("Resize 1024×1024 + normalización por percentiles")
+        steps.append("VertebraPrompt-Net: heatmap + cajas T1–L5")
+        steps.append("BoxRefiner: corrección local de cajas")
+        steps.append("MedSAM por caja → máscaras binarias")
+        steps.append("Composición de máscara multi-clase")
 
         # 4. Post-procesamiento
         vertebrae = build_vertebrae_from_mask(model_output.mask, model_output.probabilities)
@@ -99,41 +98,31 @@ class AnalyzeImageUseCase:
         return analysis
 
     def _validate_and_decode(self, image_bytes: bytes) -> np.ndarray:
+        """Valida formato y devuelve la imagen RGB tal como vino.
+
+        El adapter se encarga del resize a 1024 y la normalización por
+        percentiles, replicando el preprocesamiento del notebook 06.
+        Aquí solo verificamos: archivo válido + formato soportado +
+        que no sea trivialmente pequeña (arbitrario: ≥32 px por lado
+        para descartar thumbnails y errores obvios).
+        """
         try:
             img = Image.open(io.BytesIO(image_bytes))
         except (UnidentifiedImageError, Exception) as exc:
             raise InvalidImageError("El archivo no es una imagen válida") from exc
 
-        if img.format != "PNG":
-            raise InvalidImageError("Solo se aceptan imágenes en formato PNG")
+        if img.format not in ("PNG", "JPEG"):
+            raise InvalidImageError(
+                f"Formato no soportado: {img.format}. Solo se aceptan PNG o JPEG"
+            )
 
         w, h = img.size
-        if w < 512 or h < 512:
+        if w < 32 or h < 32:
             raise InvalidImageError(
-                f"Resolución insuficiente: {w}×{h} px. Mínimo requerido: 512×512 px"
+                f"Imagen demasiado pequeña: {w}×{h} px. Mínimo: 32×32 px"
             )
 
         return np.array(img.convert("RGB"))
-
-    def _preprocess(self, image_rgb: np.ndarray) -> np.ndarray:
-        gray = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
-        rgb_enhanced = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2RGB)
-        letterboxed = self._letterbox(rgb_enhanced, target_size=512)
-        return letterboxed
-
-    def _letterbox(self, image: np.ndarray, target_size: int) -> np.ndarray:
-        h, w = image.shape[:2]
-        scale = target_size / max(h, w)
-        new_h, new_w = int(h * scale), int(w * scale)
-        resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-
-        canvas = np.zeros((target_size, target_size, 3), dtype=np.uint8)
-        pad_top = (target_size - new_h) // 2
-        pad_left = (target_size - new_w) // 2
-        canvas[pad_top:pad_top + new_h, pad_left:pad_left + new_w] = resized
-        return canvas
 
     def _build_colored_mask(self, mask: np.ndarray) -> bytes:
         h, w = mask.shape
