@@ -9,8 +9,18 @@ output "frontend_bucket" {
 }
 
 output "frontend_website_url" {
-  description = "URL pública del frontend (S3 static website)"
+  description = "URL pública del frontend (S3 static website, origin de CloudFront)"
   value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
+}
+
+output "frontend_cloudfront_url" {
+  description = "URL HTTPS del frontend servida por CloudFront"
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "ID de la distribución CloudFront (para invalidaciones manuales)"
+  value       = aws_cloudfront_distribution.frontend.id
 }
 
 output "iam_user_arn" {

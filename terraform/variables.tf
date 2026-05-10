@@ -57,10 +57,5 @@ variable "host_port" {
 variable "cors_origins" {
   description = "Orígenes permitidos por CORS en el backend. Incluye S3 website y localhost."
   type        = list(string)
-  default = [
-    "http://localhost:3000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://anferiro-maia-proyecto-final-frontend.s3-website-us-east-1.amazonaws.com",
-  ]
+  default     = ["*"]
 }

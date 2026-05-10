@@ -68,6 +68,27 @@ resource "aws_iam_role_policy" "maia_role_frontend" {
           "s3:PutObjectAcl",
         ]
         Resource = "${aws_s3_bucket.frontend.arn}/*"
+      },
+      # CloudFront sólo soporta Resource="*" en la mayoría de acciones de
+      # gestión de distribuciones; las invalidaciones también van al "*".
+      {
+        Sid    = "CloudFrontFrontendDistribution"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateDistribution",
+          "cloudfront:UpdateDistribution",
+          "cloudfront:DeleteDistribution",
+          "cloudfront:GetDistribution",
+          "cloudfront:GetDistributionConfig",
+          "cloudfront:ListDistributions",
+          "cloudfront:TagResource",
+          "cloudfront:UntagResource",
+          "cloudfront:ListTagsForResource",
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListInvalidations",
+        ]
+        Resource = "*"
       }
     ]
   })

@@ -65,16 +65,23 @@ resource "aws_s3_bucket_policy" "frontend_public_read" {
 
 resource "null_resource" "deploy_frontend" {
   triggers = {
-    sources = sha256(join("", [
+    # Hash de los archivos estáticos del frontend, EXCLUYENDO config.js que es
+    # generado por terraform durante el apply (incluirlo causa "fileset returned
+    # an inconsistent result" porque el archivo no existe en plan time pero sí
+    # en apply time).
+    sources_static = sha256(join("", [
       for f in sort(fileset(local.frontend_dir, "**"))
       : filemd5("${local.frontend_dir}/${f}")
+      if f != "config.js"
     ]))
-    # Re-sync forzado si la IP del backend cambia (spot reclamado).
-    backend_ip = aws_instance.svc.public_ip
+    # Cambios en config.js (IP del backend, puerto, etc.) se detectan via el
+    # md5 que terraform calcula del local_file. Cubre el caso del spot reclamado.
+    config_hash     = local_file.frontend_config.content_md5
+    distribution_id = aws_cloudfront_distribution.frontend.id
   }
 
   provisioner "local-exec" {
-    command = "aws s3 sync ${local.frontend_dir}/ s3://${aws_s3_bucket.frontend.bucket} --delete"
+    command = "aws s3 sync ${local.frontend_dir}/ s3://${aws_s3_bucket.frontend.bucket} --delete && aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.frontend.id} --paths '/*'"
   }
 
   depends_on = [
@@ -82,5 +89,6 @@ resource "null_resource" "deploy_frontend" {
     aws_s3_bucket_policy.frontend_public_read,
     aws_s3_bucket_website_configuration.frontend,
     local_file.frontend_config,
+    aws_cloudfront_distribution.frontend,
   ]
 }
