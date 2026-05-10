@@ -72,3 +72,103 @@ resource "aws_iam_role_policy" "maia_role_frontend" {
     ]
   })
 }
+
+# ── Permisos para administrar el stack del servicio (EC2 + ECR + IAM) ───────
+# El role del proyecto necesita estos permisos para que `terraform apply`
+# pueda crear/actualizar el ECR repo, la EC2 Spot, el security group y el
+# instance profile que asume la EC2.
+
+resource "aws_iam_role_policy" "maia_role_services_stack" {
+  name = "maia-services-stack-policy"
+  role = data.aws_iam_role.maia_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EC2Manage"
+        Effect = "Allow"
+        Action = [
+          "ec2:RunInstances",
+          "ec2:TerminateInstances",
+          "ec2:StartInstances",
+          "ec2:StopInstances",
+          "ec2:Describe*",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateTags",
+          "ec2:DeleteTags",
+          "ec2:ModifyInstanceAttribute",
+          "ec2:RequestSpotInstances",
+          "ec2:CancelSpotInstanceRequests",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRManage"
+        Effect = "Allow"
+        Action = [
+          "ecr:CreateRepository",
+          "ecr:DeleteRepository",
+          "ecr:DescribeRepositories",
+          "ecr:ListTagsForResource",
+          "ecr:TagResource",
+          "ecr:UntagResource",
+          "ecr:PutLifecyclePolicy",
+          "ecr:GetLifecyclePolicy",
+          "ecr:DeleteLifecyclePolicy",
+          "ecr:PutImageScanningConfiguration",
+          "ecr:PutImageTagMutability",
+          "ecr:SetRepositoryPolicy",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DeleteRepositoryPolicy",
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage",
+          "ecr:BatchDeleteImage",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "IAMServiceRoleManage"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:GetRole",
+          "iam:PassRole",
+          "iam:PutRolePolicy",
+          "iam:GetRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies",
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:ListInstanceProfilesForRole",
+        ]
+        Resource = [
+          "arn:aws:iam::${var.aws_account_id}:role/${var.project_name}-svc-*",
+          "arn:aws:iam::${var.aws_account_id}:instance-profile/${var.project_name}-svc-*",
+        ]
+      },
+    ]
+  })
+}

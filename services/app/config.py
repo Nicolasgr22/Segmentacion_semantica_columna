@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Pipeline ganador VertebraPrompt + BoxRefiner + MedSAM (notebook 06)
     medsam_prompt_net_checkpoint: str = "model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt"
     medsam_box_refiner_checkpoint: str = "model-pkg/medsam/box_refiner_best.pt"
-    medsam_sam_checkpoint: str = "model-pkg/sam_vit_b_01ec64.pth"
+    medsam_sam_checkpoint: str = "model-pkg/medsam/medsam_vit_b.pth"
     medsam_finetuned_checkpoint: str = "model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt"
 
     max_upload_mb: int = 50

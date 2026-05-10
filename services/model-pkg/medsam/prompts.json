@@ -1,0 +1,5267 @@
+[
+  {
+    "patient_id": "S_122",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          496,
+          39,
+          560,
+          76
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          503,
+          80,
+          558,
+          119
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          509,
+          116,
+          568,
+          160
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          522,
+          149,
+          606,
+          237
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          563,
+          213,
+          634,
+          273
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          583,
+          255,
+          649,
+          303
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          587,
+          301,
+          656,
+          340
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          588,
+          344,
+          655,
+          393
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          569,
+          378,
+          648,
+          441
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          543,
+          412,
+          629,
+          481
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          512,
+          457,
+          594,
+          525
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          484,
+          506,
+          563,
+          574
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          455,
+          564,
+          542,
+          627
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          447,
+          631,
+          534,
+          688
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          450,
+          694,
+          536,
+          734
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          461,
+          731,
+          545,
+          774
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_63",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          474,
+          97,
+          529,
+          128
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          486,
+          123,
+          556,
+          286
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          456,
+          288,
+          558,
+          629
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          465,
+          622,
+          555,
+          695
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          488,
+          680,
+          600,
+          785
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_46",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          498,
+          123,
+          552,
+          155
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          484,
+          154,
+          550,
+          316
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          458,
+          307,
+          521,
+          384
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          456,
+          384,
+          518,
+          461
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          464,
+          453,
+          530,
+          504
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          478,
+          497,
+          548,
+          545
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          490,
+          539,
+          563,
+          589
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          495,
+          588,
+          570,
+          687
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          476,
+          680,
+          559,
+          746
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          462,
+          738,
+          547,
+          803
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_41",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          481,
+          130,
+          536,
+          159
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          481,
+          160,
+          534,
+          186
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          484,
+          190,
+          529,
+          219
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          485,
+          222,
+          527,
+          250
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          484,
+          249,
+          532,
+          281
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          483,
+          282,
+          532,
+          313
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          483,
+          315,
+          532,
+          343
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          480,
+          346,
+          531,
+          374
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          478,
+          377,
+          531,
+          411
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          471,
+          412,
+          533,
+          444
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          470,
+          444,
+          533,
+          479
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          469,
+          482,
+          534,
+          521
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          465,
+          522,
+          539,
+          564
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          467,
+          564,
+          540,
+          608
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          464,
+          609,
+          542,
+          660
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          458,
+          668,
+          544,
+          717
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          460,
+          719,
+          540,
+          761
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_188",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          481,
+          142,
+          522,
+          163
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          468,
+          164,
+          523,
+          245
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          456,
+          237,
+          498,
+          268
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          433,
+          257,
+          476,
+          289
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          416,
+          276,
+          460,
+          311
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          411,
+          312,
+          455,
+          336
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          411,
+          336,
+          458,
+          369
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          420,
+          358,
+          472,
+          405
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          441,
+          386,
+          543,
+          494
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          495,
+          487,
+          559,
+          572
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          483,
+          577,
+          555,
+          626
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_204",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          501,
+          137,
+          557,
+          168
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          500,
+          170,
+          561,
+          260
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          492,
+          257,
+          549,
+          296
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          462,
+          289,
+          536,
+          399
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          458,
+          404,
+          509,
+          435
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          458,
+          436,
+          519,
+          478
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          466,
+          473,
+          535,
+          521
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          481,
+          511,
+          554,
+          568
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          493,
+          557,
+          568,
+          609
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          502,
+          612,
+          574,
+          657
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          496,
+          658,
+          572,
+          711
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          481,
+          707,
+          565,
+          765
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          465,
+          760,
+          554,
+          824
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_87",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          470,
+          137,
+          533,
+          178
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          480,
+          171,
+          628,
+          358
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          575,
+          359,
+          624,
+          383
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          563,
+          385,
+          622,
+          426
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          542,
+          415,
+          601,
+          470
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          511,
+          447,
+          577,
+          507
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          482,
+          485,
+          551,
+          539
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          424,
+          520,
+          525,
+          676
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          428,
+          674,
+          511,
+          737
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          447,
+          729,
+          531,
+          797
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          473,
+          794,
+          546,
+          822
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_48",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          491,
+          119,
+          555,
+          156
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          476,
+          156,
+          553,
+          320
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          433,
+          312,
+          525,
+          448
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          413,
+          433,
+          481,
+          483
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          407,
+          482,
+          474,
+          528
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          412,
+          524,
+          554,
+          686
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          486,
+          665,
+          582,
+          735
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          498,
+          734,
+          589,
+          792
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          470,
+          795,
+          585,
+          907
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_98",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          526,
+          1,
+          615,
+          36
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          546,
+          29,
+          629,
+          84
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          557,
+          79,
+          636,
+          128
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          551,
+          110,
+          631,
+          183
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          523,
+          155,
+          609,
+          226
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          486,
+          196,
+          572,
+          263
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          466,
+          240,
+          548,
+          300
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          461,
+          305,
+          539,
+          355
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          472,
+          348,
+          557,
+          418
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          491,
+          399,
+          592,
+          488
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          513,
+          464,
+          622,
+          553
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          533,
+          536,
+          645,
+          615
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          538,
+          618,
+          649,
+          703
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          507,
+          694,
+          642,
+          796
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          477,
+          778,
+          614,
+          884
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          447,
+          873,
+          585,
+          969
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          425,
+          962,
+          573,
+          1023
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_155",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          470,
+          239,
+          519,
+          263
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          480,
+          262,
+          521,
+          287
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          489,
+          286,
+          533,
+          359
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          504,
+          360,
+          543,
+          411
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          500,
+          411,
+          543,
+          440
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          440,
+          431,
+          532,
+          508
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          394,
+          483,
+          473,
+          550
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          392,
+          553,
+          455,
+          597
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          407,
+          580,
+          467,
+          634
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          427,
+          620,
+          497,
+          675
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_32",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          485,
+          150,
+          537,
+          173
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          488,
+          176,
+          538,
+          203
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          486,
+          207,
+          538,
+          243
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          484,
+          246,
+          531,
+          273
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          480,
+          277,
+          526,
+          304
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          483,
+          308,
+          527,
+          339
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          483,
+          339,
+          532,
+          371
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          484,
+          374,
+          536,
+          409
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          488,
+          411,
+          539,
+          446
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          486,
+          446,
+          540,
+          484
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          490,
+          484,
+          545,
+          526
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          490,
+          527,
+          558,
+          574
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          495,
+          575,
+          562,
+          623
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          500,
+          625,
+          569,
+          673
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          500,
+          680,
+          574,
+          730
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          495,
+          734,
+          575,
+          783
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          486,
+          790,
+          570,
+          851
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_9",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          490,
+          100,
+          545,
+          127
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          490,
+          129,
+          542,
+          161
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          491,
+          162,
+          542,
+          196
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          490,
+          196,
+          537,
+          237
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          483,
+          236,
+          534,
+          271
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          482,
+          272,
+          532,
+          306
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          480,
+          307,
+          532,
+          342
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          482,
+          345,
+          532,
+          381
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          483,
+          380,
+          534,
+          415
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          482,
+          416,
+          537,
+          457
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          480,
+          458,
+          540,
+          499
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          478,
+          500,
+          544,
+          544
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          475,
+          545,
+          547,
+          588
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          480,
+          589,
+          555,
+          638
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          485,
+          641,
+          566,
+          696
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          488,
+          696,
+          568,
+          743
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          493,
+          744,
+          571,
+          787
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_127",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          491,
+          68,
+          563,
+          115
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          495,
+          120,
+          561,
+          166
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          481,
+          167,
+          553,
+          223
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          461,
+          212,
+          531,
+          270
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          428,
+          255,
+          506,
+          329
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          406,
+          307,
+          479,
+          379
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          379,
+          362,
+          461,
+          431
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          373,
+          430,
+          451,
+          486
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          375,
+          491,
+          464,
+          561
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          389,
+          547,
+          490,
+          632
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          420,
+          607,
+          525,
+          704
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          453,
+          674,
+          568,
+          778
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          486,
+          751,
+          604,
+          849
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          504,
+          845,
+          615,
+          929
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          492,
+          942,
+          612,
+          1019
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_187",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          477,
+          1,
+          524,
+          36
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          471,
+          33,
+          517,
+          66
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          464,
+          62,
+          514,
+          101
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          460,
+          94,
+          507,
+          132
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          446,
+          127,
+          501,
+          165
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          435,
+          160,
+          487,
+          198
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          427,
+          195,
+          480,
+          231
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          426,
+          232,
+          475,
+          267
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          427,
+          269,
+          478,
+          308
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          434,
+          304,
+          491,
+          351
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          444,
+          343,
+          505,
+          395
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          464,
+          383,
+          528,
+          438
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          483,
+          428,
+          546,
+          483
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          492,
+          480,
+          561,
+          533
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          492,
+          537,
+          563,
+          584
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          488,
+          594,
+          566,
+          646
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          476,
+          648,
+          565,
+          712
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_149",
+    "prompts": {
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          433,
+          0,
+          486,
+          32
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          426,
+          22,
+          478,
+          65
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          415,
+          56,
+          469,
+          100
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          405,
+          90,
+          461,
+          134
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          398,
+          129,
+          451,
+          169
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          397,
+          169,
+          448,
+          208
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          398,
+          213,
+          450,
+          249
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          406,
+          253,
+          459,
+          294
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          418,
+          291,
+          478,
+          344
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          430,
+          334,
+          501,
+          395
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          450,
+          384,
+          527,
+          442
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          467,
+          439,
+          544,
+          494
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          474,
+          500,
+          549,
+          554
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          466,
+          560,
+          546,
+          619
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          456,
+          628,
+          539,
+          677
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          453,
+          678,
+          534,
+          718
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_30",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          506,
+          115,
+          565,
+          152
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          468,
+          143,
+          555,
+          237
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          446,
+          212,
+          501,
+          263
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          402,
+          228,
+          465,
+          284
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          328,
+          247,
+          432,
+          443
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          349,
+          422,
+          463,
+          546
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          409,
+          514,
+          501,
+          600
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          452,
+          560,
+          587,
+          704
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          515,
+          689,
+          611,
+          770
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          533,
+          770,
+          626,
+          844
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_92",
+    "prompts": {
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          513,
+          0,
+          586,
+          56
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          481,
+          41,
+          564,
+          113
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          443,
+          82,
+          527,
+          162
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          399,
+          121,
+          488,
+          202
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          355,
+          154,
+          444,
+          239
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          321,
+          207,
+          413,
+          278
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          314,
+          273,
+          395,
+          339
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          319,
+          325,
+          413,
+          404
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          340,
+          367,
+          449,
+          461
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          388,
+          418,
+          496,
+          517
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          435,
+          464,
+          559,
+          576
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          484,
+          523,
+          618,
+          641
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          529,
+          601,
+          670,
+          711
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          557,
+          706,
+          692,
+          799
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          554,
+          805,
+          690,
+          897
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          518,
+          861,
+          670,
+          976
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_124",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          546,
+          155,
+          597,
+          188
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          537,
+          181,
+          588,
+          227
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          504,
+          211,
+          572,
+          283
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          479,
+          262,
+          532,
+          308
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          461,
+          288,
+          513,
+          333
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          445,
+          321,
+          498,
+          362
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          439,
+          362,
+          491,
+          396
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          442,
+          400,
+          503,
+          443
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          455,
+          433,
+          521,
+          488
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          472,
+          473,
+          545,
+          533
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          496,
+          515,
+          571,
+          579
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          519,
+          565,
+          596,
+          626
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          531,
+          623,
+          612,
+          676
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          535,
+          684,
+          612,
+          741
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          526,
+          737,
+          603,
+          786
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          508,
+          777,
+          591,
+          826
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_90",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          492,
+          141,
+          541,
+          167
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          428,
+          168,
+          540,
+          344
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          421,
+          343,
+          465,
+          374
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          426,
+          375,
+          476,
+          412
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          439,
+          401,
+          492,
+          447
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          460,
+          428,
+          518,
+          478
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          483,
+          464,
+          540,
+          510
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          488,
+          512,
+          549,
+          556
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          476,
+          550,
+          547,
+          605
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          458,
+          589,
+          527,
+          651
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          423,
+          633,
+          505,
+          698
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          405,
+          680,
+          484,
+          727
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_59",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          463,
+          118,
+          529,
+          150
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          462,
+          151,
+          525,
+          186
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          465,
+          193,
+          519,
+          224
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          466,
+          228,
+          520,
+          260
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          466,
+          265,
+          520,
+          304
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          468,
+          306,
+          520,
+          343
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          467,
+          344,
+          520,
+          383
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          467,
+          390,
+          520,
+          427
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          466,
+          435,
+          524,
+          474
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          467,
+          477,
+          528,
+          519
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          461,
+          524,
+          533,
+          569
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          462,
+          572,
+          536,
+          623
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          462,
+          625,
+          539,
+          673
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          463,
+          735,
+          545,
+          793
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          466,
+          805,
+          549,
+          868
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          468,
+          874,
+          549,
+          925
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_52",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          456,
+          99,
+          519,
+          128
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          463,
+          126,
+          519,
+          160
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          470,
+          161,
+          522,
+          195
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          473,
+          196,
+          525,
+          234
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          480,
+          235,
+          532,
+          276
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          481,
+          277,
+          533,
+          315
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          483,
+          318,
+          536,
+          355
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          481,
+          356,
+          538,
+          393
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          479,
+          393,
+          536,
+          435
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          471,
+          489,
+          539,
+          533
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          467,
+          535,
+          542,
+          583
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          459,
+          581,
+          538,
+          630
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          450,
+          630,
+          535,
+          686
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          446,
+          688,
+          531,
+          748
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          443,
+          754,
+          532,
+          815
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          443,
+          822,
+          536,
+          875
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_67",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          485,
+          117,
+          546,
+          145
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          493,
+          144,
+          546,
+          175
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          444,
+          177,
+          549,
+          350
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          419,
+          332,
+          486,
+          412
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          421,
+          410,
+          486,
+          458
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          444,
+          439,
+          512,
+          500
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          473,
+          473,
+          545,
+          533
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          495,
+          512,
+          574,
+          574
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          510,
+          563,
+          594,
+          614
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          511,
+          622,
+          596,
+          667
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          504,
+          663,
+          588,
+          710
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          480,
+          704,
+          578,
+          740
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_51",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          462,
+          128,
+          522,
+          158
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          464,
+          154,
+          526,
+          188
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          471,
+          183,
+          527,
+          221
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          474,
+          219,
+          526,
+          254
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          475,
+          259,
+          530,
+          292
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          475,
+          293,
+          529,
+          332
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          474,
+          333,
+          529,
+          372
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          469,
+          373,
+          527,
+          413
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          474,
+          419,
+          522,
+          458
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          469,
+          462,
+          520,
+          503
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          462,
+          507,
+          521,
+          550
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          453,
+          552,
+          520,
+          599
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          449,
+          600,
+          521,
+          650
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          448,
+          655,
+          525,
+          706
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          448,
+          705,
+          527,
+          768
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          447,
+          771,
+          535,
+          831
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          453,
+          840,
+          540,
+          904
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_97",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          538,
+          95,
+          584,
+          128
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          540,
+          135,
+          592,
+          161
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          544,
+          160,
+          590,
+          187
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          533,
+          185,
+          586,
+          221
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          517,
+          205,
+          574,
+          251
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          490,
+          226,
+          548,
+          272
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          471,
+          248,
+          524,
+          289
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          447,
+          273,
+          507,
+          335
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          449,
+          333,
+          500,
+          365
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          455,
+          367,
+          514,
+          408
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          480,
+          394,
+          545,
+          443
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          504,
+          420,
+          580,
+          478
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          531,
+          461,
+          604,
+          513
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          542,
+          514,
+          611,
+          557
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          539,
+          563,
+          609,
+          616
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          520,
+          614,
+          600,
+          675
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          490,
+          663,
+          586,
+          725
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_37",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          465,
+          124,
+          517,
+          152
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          463,
+          154,
+          519,
+          184
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          466,
+          187,
+          518,
+          217
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          469,
+          219,
+          519,
+          252
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          469,
+          255,
+          520,
+          287
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          468,
+          294,
+          518,
+          321
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          468,
+          326,
+          521,
+          361
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          467,
+          363,
+          521,
+          400
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          467,
+          402,
+          523,
+          437
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          466,
+          442,
+          524,
+          479
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          466,
+          483,
+          526,
+          522
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          466,
+          526,
+          535,
+          574
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          469,
+          576,
+          538,
+          624
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          472,
+          631,
+          541,
+          678
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          473,
+          685,
+          542,
+          732
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          468,
+          742,
+          539,
+          791
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          463,
+          798,
+          538,
+          845
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_66",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          521,
+          140,
+          580,
+          176
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          516,
+          175,
+          571,
+          212
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          479,
+          213,
+          564,
+          365
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          461,
+          354,
+          568,
+          573
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          530,
+          548,
+          655,
+          722
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          557,
+          718,
+          648,
+          795
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          529,
+          779,
+          621,
+          864
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          502,
+          838,
+          583,
+          877
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_37",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          489,
+          102,
+          549,
+          133
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          488,
+          133,
+          544,
+          167
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          481,
+          168,
+          538,
+          208
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          467,
+          205,
+          534,
+          294
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          436,
+          288,
+          512,
+          519
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          450,
+          508,
+          533,
+          576
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          473,
+          562,
+          558,
+          628
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          500,
+          612,
+          586,
+          683
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          520,
+          671,
+          609,
+          741
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          528,
+          744,
+          614,
+          807
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          508,
+          813,
+          611,
+          887
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          482,
+          888,
+          607,
+          950
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_12",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          466,
+          120,
+          528,
+          151
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          467,
+          149,
+          527,
+          181
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          471,
+          180,
+          522,
+          211
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          474,
+          214,
+          521,
+          244
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          477,
+          245,
+          523,
+          276
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          478,
+          277,
+          524,
+          312
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          480,
+          312,
+          528,
+          348
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          480,
+          348,
+          531,
+          384
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          480,
+          385,
+          533,
+          422
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          473,
+          424,
+          535,
+          460
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          470,
+          460,
+          535,
+          501
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          467,
+          501,
+          535,
+          542
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          468,
+          542,
+          536,
+          584
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          470,
+          585,
+          538,
+          630
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          466,
+          639,
+          542,
+          684
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          466,
+          689,
+          547,
+          735
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          462,
+          745,
+          553,
+          793
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_160",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          462,
+          97,
+          527,
+          130
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          455,
+          131,
+          523,
+          208
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          440,
+          199,
+          502,
+          252
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          417,
+          231,
+          485,
+          284
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          389,
+          259,
+          454,
+          311
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          371,
+          299,
+          432,
+          346
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          360,
+          343,
+          435,
+          441
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          381,
+          420,
+          457,
+          488
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          410,
+          459,
+          486,
+          530
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          440,
+          492,
+          527,
+          572
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          475,
+          536,
+          564,
+          612
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          502,
+          590,
+          598,
+          662
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          520,
+          661,
+          621,
+          720
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          530,
+          729,
+          623,
+          789
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          521,
+          790,
+          610,
+          827
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_185",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          485,
+          200,
+          536,
+          224
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          488,
+          222,
+          536,
+          244
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          494,
+          242,
+          536,
+          262
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          497,
+          262,
+          540,
+          282
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          494,
+          286,
+          536,
+          312
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          484,
+          308,
+          527,
+          341
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          466,
+          327,
+          508,
+          365
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          441,
+          341,
+          482,
+          381
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          416,
+          361,
+          463,
+          401
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          408,
+          391,
+          451,
+          429
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          406,
+          431,
+          464,
+          465
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          435,
+          455,
+          493,
+          504
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          459,
+          480,
+          518,
+          528
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          483,
+          515,
+          557,
+          604
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          505,
+          610,
+          564,
+          656
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          498,
+          661,
+          563,
+          691
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_190",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          432,
+          348,
+          482,
+          376
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          439,
+          378,
+          481,
+          404
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          421,
+          404,
+          481,
+          463
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          403,
+          447,
+          452,
+          489
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          382,
+          468,
+          431,
+          512
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          330,
+          485,
+          402,
+          548
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          318,
+          541,
+          375,
+          575
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          316,
+          577,
+          374,
+          612
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          323,
+          609,
+          382,
+          654
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          341,
+          637,
+          410,
+          696
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          368,
+          668,
+          444,
+          730
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          404,
+          697,
+          476,
+          764
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          437,
+          737,
+          513,
+          793
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          457,
+          785,
+          530,
+          833
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_62",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          474,
+          94,
+          531,
+          124
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          478,
+          126,
+          529,
+          160
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          480,
+          161,
+          529,
+          194
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          480,
+          198,
+          534,
+          238
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          482,
+          242,
+          535,
+          277
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          485,
+          281,
+          540,
+          322
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          478,
+          326,
+          545,
+          366
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          483,
+          368,
+          545,
+          406
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          482,
+          409,
+          549,
+          453
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          475,
+          457,
+          557,
+          506
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          477,
+          510,
+          557,
+          561
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          471,
+          564,
+          562,
+          614
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          471,
+          620,
+          563,
+          672
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          468,
+          676,
+          568,
+          737
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          472,
+          741,
+          576,
+          806
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          482,
+          815,
+          579,
+          879
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          486,
+          880,
+          585,
+          932
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_130",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          443,
+          35,
+          501,
+          66
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          444,
+          67,
+          510,
+          113
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          468,
+          94,
+          529,
+          158
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          502,
+          127,
+          560,
+          181
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          538,
+          146,
+          596,
+          201
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          568,
+          173,
+          627,
+          229
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          579,
+          214,
+          643,
+          259
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          583,
+          257,
+          649,
+          304
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          569,
+          295,
+          649,
+          352
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          543,
+          330,
+          623,
+          394
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          508,
+          373,
+          597,
+          447
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          487,
+          428,
+          563,
+          485
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          480,
+          487,
+          552,
+          539
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          465,
+          546,
+          553,
+          606
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          467,
+          608,
+          559,
+          670
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          469,
+          675,
+          563,
+          732
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_26",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          500,
+          109,
+          552,
+          138
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          449,
+          138,
+          597,
+          638
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          498,
+          625,
+          583,
+          697
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          462,
+          678,
+          563,
+          785
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "N_44",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          490,
+          130,
+          547,
+          156
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          492,
+          161,
+          544,
+          186
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          493,
+          190,
+          542,
+          218
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          490,
+          222,
+          539,
+          254
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          487,
+          255,
+          536,
+          291
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          485,
+          292,
+          535,
+          328
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          480,
+          329,
+          535,
+          366
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          480,
+          371,
+          539,
+          408
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          479,
+          411,
+          539,
+          447
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          476,
+          451,
+          539,
+          490
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          469,
+          491,
+          539,
+          532
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          461,
+          535,
+          537,
+          582
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          456,
+          582,
+          535,
+          630
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          449,
+          635,
+          535,
+          685
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          447,
+          688,
+          533,
+          743
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          447,
+          752,
+          536,
+          807
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          449,
+          817,
+          544,
+          867
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_38",
+    "prompts": {
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          425,
+          1,
+          514,
+          58
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          414,
+          43,
+          498,
+          112
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          385,
+          88,
+          466,
+          160
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          336,
+          132,
+          430,
+          206
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          309,
+          176,
+          401,
+          247
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "9": {
+        "vertebra": "T9",
+        "bbox_xyxy": [
+          298,
+          240,
+          389,
+          305
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "10": {
+        "vertebra": "T10",
+        "bbox_xyxy": [
+          303,
+          300,
+          402,
+          381
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "11": {
+        "vertebra": "T11",
+        "bbox_xyxy": [
+          327,
+          349,
+          441,
+          452
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "12": {
+        "vertebra": "T12",
+        "bbox_xyxy": [
+          372,
+          410,
+          491,
+          512
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "13": {
+        "vertebra": "L1",
+        "bbox_xyxy": [
+          415,
+          483,
+          541,
+          588
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "14": {
+        "vertebra": "L2",
+        "bbox_xyxy": [
+          444,
+          571,
+          567,
+          669
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "15": {
+        "vertebra": "L3",
+        "bbox_xyxy": [
+          451,
+          674,
+          571,
+          763
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "16": {
+        "vertebra": "L4",
+        "bbox_xyxy": [
+          433,
+          769,
+          566,
+          865
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "17": {
+        "vertebra": "L5",
+        "bbox_xyxy": [
+          417,
+          859,
+          549,
+          943
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  },
+  {
+    "patient_id": "S_80",
+    "prompts": {
+      "1": {
+        "vertebra": "T1",
+        "bbox_xyxy": [
+          552,
+          205,
+          597,
+          225
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "2": {
+        "vertebra": "T2",
+        "bbox_xyxy": [
+          473,
+          228,
+          593,
+          459
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "3": {
+        "vertebra": "T3",
+        "bbox_xyxy": [
+          478,
+          461,
+          540,
+          529
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "4": {
+        "vertebra": "T4",
+        "bbox_xyxy": [
+          511,
+          519,
+          562,
+          559
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "5": {
+        "vertebra": "T5",
+        "bbox_xyxy": [
+          525,
+          552,
+          574,
+          592
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "6": {
+        "vertebra": "T6",
+        "bbox_xyxy": [
+          533,
+          587,
+          597,
+          630
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "7": {
+        "vertebra": "T7",
+        "bbox_xyxy": [
+          532,
+          632,
+          606,
+          678
+        ],
+        "prompt_origen": "bbox_gt"
+      },
+      "8": {
+        "vertebra": "T8",
+        "bbox_xyxy": [
+          520,
+          682,
+          602,
+          759
+        ],
+        "prompt_origen": "bbox_gt"
+      }
+    }
+  }
+]

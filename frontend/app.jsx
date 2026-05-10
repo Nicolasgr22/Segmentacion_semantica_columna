@@ -163,19 +163,28 @@ function UploadZone({ onUpload }) {
 }
 
 // ───────────────────────── Pantalla de procesamiento ─────────────────────────
+// Estos pasos deben coincidir exactamente con los que el backend agrega a
+// `processing.steps` en services/app/core/use_cases/analyze_image.py.
+// Si cambian allá, cambiarlos también acá (no hay streaming: la animación es
+// una estimación de UX mientras se espera la respuesta).
 const PROCESS_STEPS = [
-  'Decodificando imagen',
-  'Resize 1024 + percentiles',
-  'VertebraPrompt-Net',
-  'BoxRefiner',
-  'MedSAM por caja',
-  'Composición y métricas',
+  'Decodificación de imagen',
+  'Letterbox 1024×1024 + normalización por percentiles',
+  'VertebraPrompt-Net (512×512): heatmap + wh + offset',
+  'DP anatómico → cajas T1–L5 con plantilla mediana',
+  'BoxRefiner: corrección local de cajas (192×192)',
+  'MedSAM box_only por caja → máscaras binarias',
+  'Composición y reverse-letterbox al espacio original',
+  'Cálculo métricas por vértebra',
+  'Generación máscara coloreada',
 ];
 
 function ProcessingScreen({ filename, fileUrl }) {
   // Avance suave de UI mientras se espera la respuesta del backend
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  // Dimensiones naturales de la imagen para alinear el frame con el resultado.
+  const [imgDims, setImgDims] = useState(null);
 
   useEffect(() => {
     // El backend puede tardar varios segundos. Mostramos avance estimado.
@@ -190,20 +199,32 @@ function ProcessingScreen({ filename, fileUrl }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Aspect ratio dinámico = dims reales de la imagen subida; así el frame de
+  // procesamiento ocupa exactamente el mismo lugar que el .comparator del
+  // resultado y no hay "salto" visual al transicionar.
+  const aspectRatio = imgDims ? `${imgDims.w} / ${imgDims.h}` : undefined;
+
   return (
     <div className="processing">
       <div className="processing-stage">
-        <div className="scan-frame">
-          <div className="scan-svg">
-            {fileUrl
-              ? <img src={fileUrl} alt="Radiografía" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              : null
-            }
-          </div>
-          <div className="scan-line" />
-          <div className="scan-grid" />
-          <div className="scan-corners">
-            <span /><span /><span /><span />
+        <div className="processing-stage-frame">
+          <div className="scan-frame" style={aspectRatio ? { aspectRatio } : undefined}>
+            <div className="scan-svg">
+              {fileUrl
+                ? <img
+                    src={fileUrl}
+                    alt="Radiografía"
+                    onLoad={(e) => setImgDims({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                : null
+              }
+            </div>
+            <div className="scan-line" />
+            <div className="scan-grid" />
+            <div className="scan-corners">
+              <span /><span /><span /><span />
+            </div>
           </div>
         </div>
 
@@ -263,6 +284,7 @@ function ErrorScreen({ error, onRetry }) {
 function ResultView({ result, fileUrl, filename, onNew }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [hoveredId, setHoveredId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -330,6 +352,16 @@ function ResultView({ result, fileUrl, filename, onNew }) {
     { key: 'thoracic', label: 'Torácica', range: 'T1 – T12' },
     { key: 'lumbar',   label: 'Lumbar',   range: 'L1 – L5' },
   ];
+
+  // Vértebra activa para mostrar bounding box: hover gana sobre selección
+  // (al pasar el mouse sobre otra chip preview esa, al salir vuelve a la
+  // seleccionada con click). Solo se muestra si la vértebra fue detectada
+  // y el backend devolvió bounding box.
+  const activeId = hoveredId ?? selectedId;
+  const activeVert = activeId
+    ? vertebrae.find(v => v.id === activeId && v.detected && v.bounding_box)
+    : null;
+  const toggleSelected = (id) => setSelectedId(prev => (prev === id ? null : id));
 
   // Descarga de exports vía endpoint del backend
   const downloadExport = (format) => {
@@ -446,6 +478,45 @@ function ResultView({ result, fileUrl, filename, onNew }) {
               <div className="slider-tag top">ORIGINAL</div>
               <div className="slider-tag bottom">SEGMENTADO</div>
             </div>
+
+            {/* Bounding-box overlay de la vértebra activa (hover/click en chip).
+                Las coords vienen en píxeles del espacio original (lo que
+                devuelve el backend tras reverse-letterbox); el comparator
+                tiene el aspect ratio idéntico, así que basta con
+                porcentajes. */}
+            {activeVert && (() => {
+              const bb = activeVert.bounding_box;
+              const W = mask.dimensions.width;
+              const H = mask.dimensions.height;
+              const leftPct = (bb.x_min / W) * 100;
+              const topPct = (bb.y_min / H) * 100;
+              const widthPct = ((bb.x_max - bb.x_min) / W) * 100;
+              const heightPct = ((bb.y_max - bb.y_min) / H) * 100;
+              // Si la caja está muy pegada al borde superior, mostrar el
+              // tag dentro de la caja (top-left) en vez de arriba.
+              const labelInside = topPct < 5;
+              return (
+                <div className="bbox-layer">
+                  <div
+                    className={`bbox-overlay ${labelInside ? 'tag-inside' : ''}`}
+                    style={{
+                      left: `${leftPct}%`,
+                      top: `${topPct}%`,
+                      width: `${widthPct}%`,
+                      height: `${heightPct}%`,
+                      '--bbox-color': regionColors[activeVert.region],
+                    }}
+                  >
+                    <span className="bbox-label">
+                      {activeVert.label}
+                      <span className="bbox-conf">
+                        {(activeVert.confidence * 100).toFixed(0)}%
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* HUD esquinas — solo datos REALES del backend */}
@@ -520,18 +591,30 @@ function ResultView({ result, fileUrl, filename, onNew }) {
           <section className="panel-card">
             <header><h3>Vértebras</h3></header>
             <div className="vert-grid">
-              {vertebrae.map((v) => (
-                <button
-                  key={v.id}
-                  className={`vert-chip ${v.region} ${hoveredId === v.id ? 'on' : ''} ${!v.detected ? 'missing' : ''}`}
-                  onMouseEnter={() => setHoveredId(v.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  title={v.detected
-                    ? `${v.label} · ${(v.confidence * 100).toFixed(1)}% · ${v.pixel_count} px`
-                    : `${v.label} · no detectada`
-                  }
-                >{v.label}</button>
-              ))}
+              {vertebrae.map((v) => {
+                const isHovered = hoveredId === v.id;
+                const isSelected = selectedId === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    className={[
+                      'vert-chip',
+                      v.region,
+                      (isHovered || isSelected) ? 'on' : '',
+                      isSelected ? 'selected' : '',
+                      !v.detected ? 'missing' : '',
+                    ].filter(Boolean).join(' ')}
+                    onMouseEnter={() => setHoveredId(v.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => v.detected && v.bounding_box && toggleSelected(v.id)}
+                    disabled={!v.detected || !v.bounding_box}
+                    title={v.detected
+                      ? `${v.label} · ${(v.confidence * 100).toFixed(1)}% · ${v.pixel_count} px${v.bounding_box ? ' · click para fijar' : ''}`
+                      : `${v.label} · no detectada`
+                    }
+                  >{v.label}</button>
+                );
+              })}
             </div>
           </section>
 

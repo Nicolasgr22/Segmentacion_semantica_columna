@@ -59,3 +59,10 @@ Proyecto_maia/*
 *.pth
 *.pt
 *.whl
+
+# Frontend config generado por terraform (contiene la IP de la EC2 Spot)
+frontend/config.js
+
+# Terraform local state caché
+.terraform/
+*.tfstate.lock.info

@@ -1,18 +1,38 @@
-"""Adapter para el pipeline ganador VertebraPrompt-Net + BoxRefiner + MedSAM.
+"""Adapter del pipeline ganador VertebraPrompt-Net + BoxRefiner + MedSAM.
 
-Las arquitecturas de VertebraPromptNet y BoxRefiner se portan desde
-``notebooks/medsam_pipeline/notebooks/06_estrategia_ganadora_vertebraprompt_boxrefiner.ipynb``.
-La etapa MedSAM usa el predictor de ``segment_anything`` con el ViT-B base más
-los pesos finetuneados (decoder + último bloque del encoder).
+Replica fielmente la estrategia del notebook
+``notebooks/medsam_pipeline/notebooks/06_estrategia_ganadora_vertebraprompt_boxrefiner.ipynb``
+para producción:
 
-La inferencia implementada aquí es una versión simplificada del decodificador
-del notebook (heatmap → picos top-N con NMS → top-anchor T1..L5 → BoxRefiner →
-MedSAM por caja). No incluye programación dinámica anatómica ni shift-fix.
+1. **Letterbox a 1024×1024 RGB** preservando aspect ratio (espacio del dataset
+   preprocesado del notebook 03 — sobre el que se entrenó todo).
+2. **VertebraPrompt-Net** corre a 512×512 sobre la versión gris-normalizada por
+   percentiles 1/99.5 (idéntico al notebook).
+3. Decodificación anatómica completa: extracción de picos top-N con NMS,
+   penalización de cráneo (``estimar_y_min_anatomico``), programación dinámica
+   con plantilla mediana de bboxes (``seleccionar_camino_dp``), top-anchor T1..L5
+   y mezcla 0.65·predicción + 0.35·plantilla con expansión ``BOX_EXPAND_W/H``.
+4. **BoxRefiner** sobre crops 192×192 de cada caja (con ``CONTEXT_FRAC=0.85``);
+   produce deltas (dx, dy, dw, dh) ya saturados con ``tanh·max_abs``.
+5. **MedSAM** prompt-mode ``box_only`` (sin puntos), bbox sin expansión adicional
+   (``sin_pad``), aplicado por vértebra sobre la imagen RGB 1024×1024.
+6. La máscara final se compone en grilla 1024 y luego se devuelve al espacio del
+   cliente deshaciendo el letterbox (recorte del área válida + resize NEAREST).
+
+Notas:
+
+- ``mejor_shift_anatomico`` del notebook depende de la máscara GT, así que NO
+  se aplica aquí (solo aplica para evaluación). En producción se mantiene la
+  asignación top-anchor T1..L5 del DP.
+- El template mediano se carga desde ``model-pkg/medsam/template_bbox.json``,
+  generado offline con ``services/scripts/generate_template_bbox.py`` a partir
+  del split train del dataset preprocesado.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -30,17 +50,39 @@ _executor = ThreadPoolExecutor(max_workers=2)
 
 
 # ---------------------------------------------------------------------------
-# Constantes anatómicas — alineadas con el notebook 06.
+# Constantes (alineadas con notebook 06, celda 2).
 # ---------------------------------------------------------------------------
-IMG_SIZE = 1024  # tamaño de inferencia heredado de la exportación MedSAM
+PROMPT_NET_INPUT = 512   # entrada VertebraPromptNet (IMG_SIZE en el notebook)
+MEDSAM_IMG_SIZE = 1024   # grilla del dataset preprocesado y de MedSAM
 BASE_CH = 32
-N_CLASES = 17  # T1..T12 + L1..L5
+N_CLASES = 17
+
+# Decodificación
 TOP_PICOS = 90
 MIN_DIST_PICOS = 8
 THR_REL_PEAKS = 0.12
+N_CAJAS_CAMINO = 17
+MAX_CANDIDATOS = 120
+MAX_GAP_REL_DY = 2.40
+Y_MIN_ANATOMICO_MARGEN = 0.06
+CRANEO_SCORE_FACTOR = 0.12
 
-# Map T1..L5 → IDs ID2LABEL del servicio (T1=6, ..., L5=22).
-# Las clases cervicales (1-5, C7..C3) no las cubre este pipeline.
+# Construcción de cajas desde wh-map
+BOX_EXPAND_W = 1.12
+BOX_EXPAND_H = 1.12
+WH_PRED_BLEND = 0.65          # peso predicción del wh-map
+WH_TEMPLATE_BLEND = 0.35      # peso plantilla mediana
+WH_CLIP_W = (0.03, 0.28)      # límites razonables sobre w_rel
+WH_CLIP_H = (0.025, 0.18)     # límites razonables sobre h_rel
+
+# BoxRefiner
+BOX_REFINER_SIZE = 192
+BOX_REFINER_BLEND = 0.80
+BOX_REFINER_MAX_ABS_DXY = 0.45
+BOX_REFINER_MAX_ABS_LOG_SCALE = 0.45
+BOX_REFINER_CONTEXT_FRAC = 0.85
+
+# Etiquetas T1..L5 → IDs del servicio (T1=6, ..., L5=22).
 VERTEBRA_LABELS = [
     "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12",
     "L1", "L2", "L3", "L4", "L5",
@@ -50,16 +92,11 @@ LABEL_TO_SERVICE_ID = {
     "T7": 12, "T8": 13, "T9": 14, "T10": 15, "T11": 16, "T12": 17,
     "L1": 18, "L2": 19, "L3": 20, "L4": 21, "L5": 22,
 }
-
-BOX_REFINER_SIZE = 96
-BOX_REFINER_BLEND = 0.6
-BOX_REFINER_MAX_ABS_DXY = 0.35
-BOX_REFINER_MAX_ABS_LOG_SCALE = 0.4
-BOX_REFINER_CONTEXT_FRAC = 0.6
+N_SERVICE_CLASSES = 23  # 0..22
 
 
 # ---------------------------------------------------------------------------
-# Arquitectura VertebraPrompt-Net (port directo del notebook 06, celda 10).
+# Arquitecturas (port directo del notebook 06).
 # ---------------------------------------------------------------------------
 class _ConvBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int) -> None:
@@ -78,7 +115,7 @@ class _ConvBlock(nn.Module):
 
 
 class VertebraPromptNet(nn.Module):
-    """U-Net ligera multi-tarea: heat, class_heat (T1-L5), wh, off, presence."""
+    """U-Net multi-tarea (notebook 06, celda 10)."""
 
     def __init__(self, base: int = BASE_CH, n_classes: int = N_CLASES) -> None:
         super().__init__()
@@ -128,54 +165,120 @@ class VertebraPromptNet(nn.Module):
         }
 
 
-# ---------------------------------------------------------------------------
-# Arquitectura BoxRefiner: CNN local sobre crop+mask → (dx, dy, dw, dh).
-# Reproduce el contrato del notebook 06: entrada 2 canales (crop normalizado +
-# máscara binaria del bbox propuesto) en BOX_REFINER_SIZE × BOX_REFINER_SIZE.
-# ---------------------------------------------------------------------------
-class BoxRefiner(nn.Module):
-    def __init__(self, base: int = 32) -> None:
+class BoxRefinerNet(nn.Module):
+    """Refinador local de cajas (notebook 06, celda 24).
+
+    Importante: el ``tanh·max_abs`` se aplica DENTRO del forward para que el
+    checkpoint se cargue exactamente como fue entrenado.
+    """
+
+    def __init__(self) -> None:
         super().__init__()
-        self.backbone = nn.Sequential(
-            _ConvBlock(2, base),
+        self.net = nn.Sequential(
+            _ConvBlock(2, 24),
             nn.MaxPool2d(2),
-            _ConvBlock(base, base * 2),
+            _ConvBlock(24, 48),
             nn.MaxPool2d(2),
-            _ConvBlock(base * 2, base * 4),
+            _ConvBlock(48, 96),
             nn.MaxPool2d(2),
-            _ConvBlock(base * 4, base * 6),
+            _ConvBlock(96, 128),
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
-        )
-        self.head = nn.Sequential(
-            nn.Linear(base * 6, base * 4),
+            nn.Dropout(0.15),
+            nn.Linear(128, 96),
             nn.SiLU(inplace=True),
-            nn.Linear(base * 4, 4),
+            nn.Linear(96, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.head(self.backbone(x))
+        out = self.net(x)
+        dxy = torch.tanh(out[:, :2]) * BOX_REFINER_MAX_ABS_DXY
+        dwh = torch.tanh(out[:, 2:]) * BOX_REFINER_MAX_ABS_LOG_SCALE
+        return torch.cat([dxy, dwh], dim=1)
 
 
 # ---------------------------------------------------------------------------
-# Helpers de geometría — port simplificado del notebook 06.
+# Letterbox (preserva aspect ratio).
 # ---------------------------------------------------------------------------
-def _bbox_clip(bbox: list[float], H: int, W: int) -> list[float]:
-    x0, y0, x1, y1 = bbox
-    x0 = float(np.clip(x0, 0, W - 1))
-    y0 = float(np.clip(y0, 0, H - 1))
-    x1 = float(np.clip(x1, x0 + 1, W - 1))
-    y1 = float(np.clip(y1, y0 + 1, H - 1))
+def _letterbox_to_grid(image_rgb: np.ndarray, target: int = MEDSAM_IMG_SIZE) -> tuple[np.ndarray, dict]:
+    """Encajona ``image_rgb`` en un canvas cuadrado ``target × target`` RGB.
+
+    Devuelve el canvas y los parámetros para revertir el letterbox sobre
+    máscaras posteriores.
+    """
+    H, W = image_rgb.shape[:2]
+    scale = target / max(H, W)
+    new_h, new_w = int(round(H * scale)), int(round(W * scale))
+    resized = np.array(
+        Image.fromarray(image_rgb).resize((new_w, new_h), Image.BILINEAR)
+    )
+    pad_top = (target - new_h) // 2
+    pad_left = (target - new_w) // 2
+    canvas = np.zeros((target, target, 3), dtype=np.uint8)
+    canvas[pad_top:pad_top + new_h, pad_left:pad_left + new_w, :] = resized
+    return canvas, {
+        "scale": scale,
+        "pad_top": pad_top,
+        "pad_left": pad_left,
+        "valid_h": new_h,
+        "valid_w": new_w,
+        "orig_h": H,
+        "orig_w": W,
+    }
+
+
+def _unletterbox_mask(mask_grid: np.ndarray, params: dict, resample: int) -> np.ndarray:
+    """Recorta el área válida del canvas y reescala al tamaño original."""
+    pad_top = params["pad_top"]
+    pad_left = params["pad_left"]
+    valid_h = params["valid_h"]
+    valid_w = params["valid_w"]
+    orig_h = params["orig_h"]
+    orig_w = params["orig_w"]
+    cropped = mask_grid[pad_top:pad_top + valid_h, pad_left:pad_left + valid_w]
+    return np.array(
+        Image.fromarray(cropped).resize((orig_w, orig_h), resample)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Helpers geométricos.
+# ---------------------------------------------------------------------------
+def _bbox_clip(bbox: list[float], H: int, W: int) -> list[int]:
+    x0, y0, x1, y1 = (int(round(float(v))) for v in bbox)
+    x0 = int(np.clip(x0, 0, W - 1))
+    x1 = int(np.clip(x1, 0, W - 1))
+    y0 = int(np.clip(y0, 0, H - 1))
+    y1 = int(np.clip(y1, 0, H - 1))
+    if x1 <= x0:
+        x1 = min(W - 1, x0 + 1)
+    if y1 <= y0:
+        y1 = min(H - 1, y0 + 1)
     return [x0, y0, x1, y1]
 
 
-def _expand_context(bbox: list[float], img_shape, frac: float = BOX_REFINER_CONTEXT_FRAC) -> list[float]:
+def _expand_context(bbox: list[float], img_shape: tuple, frac: float = BOX_REFINER_CONTEXT_FRAC) -> list[int]:
     H, W = img_shape[:2]
-    x0, y0, x1, y1 = bbox
+    x0, y0, x1, y1 = (float(v) for v in bbox)
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     bw, bh = max(x1 - x0, 2.0), max(y1 - y0, 2.0)
-    side = max(bw, bh) * (1.0 + frac)
+    side = max(bw, bh) * (1.0 + float(frac))
     return _bbox_clip([cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2], H, W)
+
+
+# ---------------------------------------------------------------------------
+# Decodificación: picos, y-mín cráneo, DP, segmento, construcción de cajas.
+# ---------------------------------------------------------------------------
+def _imagen_inferencia_tensor(img_rgb_grid: np.ndarray, device: torch.device) -> torch.Tensor:
+    """RGB letterboxed (1024) → tensor (1, 1, 512, 512) gris-normalizado."""
+    gray = np.array(
+        Image.fromarray(img_rgb_grid).convert("L").resize(
+            (PROMPT_NET_INPUT, PROMPT_NET_INPUT), Image.BILINEAR
+        )
+    ).astype(np.float32)
+    p1, p99 = np.percentile(gray, [1, 99.5])
+    gray = np.clip((gray - p1) / (p99 - p1 + 1e-6), 0, 1)
+    return torch.from_numpy(gray[None, None, ...].astype(np.float32)).to(device)
 
 
 def _extract_peaks(score_map: np.ndarray, n_peaks: int = TOP_PICOS,
@@ -201,12 +304,183 @@ def _extract_peaks(score_map: np.ndarray, n_peaks: int = TOP_PICOS,
     return peaks
 
 
-def _build_refiner_input(img_gray: np.ndarray, bbox_pred: list[float]) -> torch.Tensor:
-    """Construye tensor (2, BOX_REFINER_SIZE, BOX_REFINER_SIZE) crop + mask."""
-    ctx = _expand_context(bbox_pred, img_gray.shape)
+def _estimar_y_min_anatomico(img_rgb_grid: np.ndarray) -> float:
+    """Detecta el límite superior por debajo del cuello/cráneo (en grilla 512)."""
+    gray = np.array(
+        Image.fromarray(img_rgb_grid).convert("L").resize(
+            (PROMPT_NET_INPUT, PROMPT_NET_INPUT), Image.BILINEAR
+        )
+    ).astype(np.float32)
+    valores = gray[gray > 0]
+    if len(valores) == 0:
+        return 0.0
+    thr = max(5.0, float(np.percentile(valores, 8)))
+    active = (gray > thr).astype(np.float32)
+    width = active.mean(axis=1)
+    kernel = np.ones(21, dtype=np.float32) / 21
+    width_s = np.convolve(width, kernel, mode="same")
+
+    h = PROMPT_NET_INPUT
+    top_med = float(np.median(width_s[: int(0.16 * h)]))
+    search0 = int(0.12 * h)
+    search1 = int(0.55 * h)
+    search = width_s[search0:search1]
+    if len(search) == 0:
+        return 0.0
+    mid_p85 = float(np.percentile(search, 85))
+    umbral_ensanche = max(0.24, top_med * 1.35)
+    if top_med > 0.30 or mid_p85 < umbral_ensanche:
+        return 0.0
+    idx = np.where(search > umbral_ensanche)[0]
+    if len(idx) == 0:
+        return 0.0
+    y_ensanche = float(search0 + idx[0])
+    return max(0.0, y_ensanche - Y_MIN_ANATOMICO_MARGEN * h)
+
+
+def _seleccionar_camino_dp(candidatos: list[dict], template: list[dict],
+                           n_pasos: int = N_CAJAS_CAMINO,
+                           max_gap_rel: float = MAX_GAP_REL_DY) -> list[dict]:
+    """Programación dinámica: elige n_pasos picos coherentes con la plantilla."""
+    if not candidatos:
+        raise RuntimeError("No hay candidatos de centro.")
+
+    candidatos = sorted(candidatos, key=lambda c: (c["y"], c["x"]))[:MAX_CANDIDATOS]
+    n = len(candidatos)
+    k = min(int(n_pasos), n)
+    if k <= 0:
+        raise RuntimeError("No hay suficientes candidatos.")
+
+    xs = np.array([c["x"] for c in candidatos], dtype=np.float32)
+    ys = np.array([c["y"] for c in candidatos], dtype=np.float32)
+    sc = np.array([c["score"] for c in candidatos], dtype=np.float32)
+
+    cy_template = np.array([t["cy_rel"] for t in template], dtype=np.float32) * PROMPT_NET_INPUT
+    dy_template = np.diff(cy_template)
+    dy_default = float(np.median(dy_template)) if len(dy_template) else 30.0
+
+    dp = np.full((k, n), -1e9, dtype=np.float32)
+    prev = np.full((k, n), -1, dtype=np.int32)
+    dp[0] = sc
+
+    for j in range(1, k):
+        expected_dy = float(dy_template[j - 1]) if j - 1 < len(dy_template) else dy_default
+        expected_dy = max(expected_dy, 4.0)
+        min_gap = max(3.0, expected_dy * 0.35)
+        max_gap = max(min_gap + 1.0, expected_dy * max_gap_rel)
+
+        for i in range(n):
+            dy = ys[i] - ys[:i]
+            valid = (dy >= min_gap) & (dy <= max_gap)
+            if not valid.any():
+                continue
+            dx = np.abs(xs[i] - xs[:i])
+            dy_pen = np.abs(dy - expected_dy) / expected_dy
+            dx_pen = dx / max(PROMPT_NET_INPUT * 0.22, 1.0)
+            trans = dp[j - 1, :i] - 0.34 * dy_pen - 0.08 * dx_pen
+            trans[~valid] = -1e9
+            best = int(np.argmax(trans))
+            dp[j, i] = sc[i] + trans[best]
+            prev[j, i] = best
+
+    end = int(np.argmax(dp[k - 1]))
+    if dp[k - 1, end] < -1e8 and max_gap_rel < 8.0:
+        return _seleccionar_camino_dp(candidatos, template, n_pasos=n_pasos, max_gap_rel=8.0)
+
+    path = [end]
+    for j in range(k - 1, 0, -1):
+        end = int(prev[j, end])
+        if end < 0:
+            break
+        path.append(end)
+    path = path[::-1]
+
+    if len(path) != k:
+        orden = np.argsort(sc)[-k:]
+        path = sorted(orden.tolist(), key=lambda i: ys[i])
+
+    return [candidatos[i] for i in path]
+
+
+def _construir_prompts_desde_segmento(segmento: list[dict], template: list[dict],
+                                      grid_size: int) -> list[tuple[str, list[int], float]]:
+    """Convierte centros DP a cajas etiquetadas T1..L5 en grilla ``grid_size``.
+
+    Replica la fórmula del notebook 06:
+        bw = (0.65 · pred_w + 0.35 · tpl_w) · BOX_EXPAND_W
+        bh = (0.65 · pred_h + 0.35 · tpl_h) · BOX_EXPAND_H
+    con `pred_w/h` recortados a rangos anatómicos razonables.
+    """
+    n_use = min(N_CLASES, len(segmento))
+    segmento = sorted(segmento, key=lambda c: (c["y"], c["x"]))[:n_use]
+    out: list[tuple[str, list[int], float]] = []
+    scale = grid_size / PROMPT_NET_INPUT
+    for orden, cand in enumerate(segmento):
+        vertebra = VERTEBRA_LABELS[orden]
+        trow = template[orden]
+        cx = cand["x"] * scale
+        cy = cand["y"] * scale
+        wh_rel = cand.get("wh_rel", (trow["w_rel"], trow["h_rel"]))
+        pred_w = float(np.clip(wh_rel[0], *WH_CLIP_W)) * grid_size
+        pred_h = float(np.clip(wh_rel[1], *WH_CLIP_H)) * grid_size
+        tpl_w = float(trow["w_rel"]) * grid_size
+        tpl_h = float(trow["h_rel"]) * grid_size
+        bw = (WH_PRED_BLEND * pred_w + WH_TEMPLATE_BLEND * tpl_w) * BOX_EXPAND_W
+        bh = (WH_PRED_BLEND * pred_h + WH_TEMPLATE_BLEND * tpl_h) * BOX_EXPAND_H
+        bbox = _bbox_clip(
+            [cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2],
+            grid_size, grid_size,
+        )
+        out.append((vertebra, bbox, float(cand["score"])))
+    return out
+
+
+def _prompts_desde_outputs(img_rgb_grid: np.ndarray, outputs: dict[str, np.ndarray],
+                           template: list[dict]) -> list[tuple[str, list[int], float]]:
+    """Orquesta picos + cráneo + DP + construcción de cajas en grilla 1024."""
+    heat = outputs["heat"]
+    wh_map = outputs["wh"]
+    off_map = outputs["off"]
+
+    picos = _extract_peaks(heat)
+    if not picos:
+        return []
+
+    y_min_hm = _estimar_y_min_anatomico(img_rgb_grid)
+
+    candidatos: list[dict] = []
+    for p in picos:
+        x, y = p["x"], p["y"]
+        cx_hm = x + float(off_map[0, y, x])
+        cy_hm = y + float(off_map[1, y, x])
+        score = float(p["score"])
+        if cy_hm < y_min_hm:
+            if cy_hm < y_min_hm - PROMPT_NET_INPUT * 0.06:
+                continue
+            score *= CRANEO_SCORE_FACTOR
+        candidatos.append({
+            "x": cx_hm,
+            "y": cy_hm,
+            "score": score,
+            "wh_rel": (float(wh_map[0, y, x]), float(wh_map[1, y, x])),
+        })
+
+    if not candidatos:
+        return []
+
+    camino = _seleccionar_camino_dp(candidatos, template)
+    return _construir_prompts_desde_segmento(camino, template, grid_size=MEDSAM_IMG_SIZE)
+
+
+# ---------------------------------------------------------------------------
+# BoxRefiner I/O.
+# ---------------------------------------------------------------------------
+def _build_refiner_input(img_gray_grid: np.ndarray, bbox_pred: list[int]) -> torch.Tensor:
+    """Tensor (2, BOX_REFINER_SIZE, BOX_REFINER_SIZE) = [crop normalizado, máscara box]."""
+    ctx = _expand_context(bbox_pred, img_gray_grid.shape)
     x0, y0, x1, y1 = ctx
     crop = (
-        Image.fromarray(img_gray)
+        Image.fromarray(img_gray_grid)
         .crop((int(x0), int(y0), int(x1) + 1, int(y1) + 1))
         .resize((BOX_REFINER_SIZE, BOX_REFINER_SIZE), Image.BILINEAR)
     )
@@ -215,7 +489,7 @@ def _build_refiner_input(img_gray: np.ndarray, bbox_pred: list[float]) -> torch.
     arr = np.clip((arr - p1) / (p99 - p1 + 1e-6), 0, 1)
 
     mask_box = np.zeros((BOX_REFINER_SIZE, BOX_REFINER_SIZE), dtype=np.float32)
-    bx0, by0, bx1, by1 = bbox_pred
+    bx0, by0, bx1, by1 = (float(v) for v in bbox_pred)
     sx = BOX_REFINER_SIZE / max(x1 - x0 + 1, 1)
     sy = BOX_REFINER_SIZE / max(y1 - y0 + 1, 1)
     rx0 = int(np.clip(round((bx0 - x0) * sx), 0, BOX_REFINER_SIZE - 1))
@@ -228,13 +502,14 @@ def _build_refiner_input(img_gray: np.ndarray, bbox_pred: list[float]) -> torch.
     return torch.from_numpy(np.stack([arr, mask_box], axis=0).astype(np.float32))
 
 
-def _apply_delta(bbox_pred: list[float], delta: np.ndarray, img_shape, blend: float = BOX_REFINER_BLEND) -> list[float]:
+def _apply_delta(bbox_pred: list[int], delta: np.ndarray, img_shape: tuple) -> list[int]:
+    """Aplica deltas (ya saturados por el modelo) con factor BLEND."""
     H, W = img_shape[:2]
-    dx = float(np.clip(delta[0], -BOX_REFINER_MAX_ABS_DXY, BOX_REFINER_MAX_ABS_DXY)) * blend
-    dy = float(np.clip(delta[1], -BOX_REFINER_MAX_ABS_DXY, BOX_REFINER_MAX_ABS_DXY)) * blend
-    dw = float(np.clip(delta[2], -BOX_REFINER_MAX_ABS_LOG_SCALE, BOX_REFINER_MAX_ABS_LOG_SCALE)) * blend
-    dh = float(np.clip(delta[3], -BOX_REFINER_MAX_ABS_LOG_SCALE, BOX_REFINER_MAX_ABS_LOG_SCALE)) * blend
-    x0, y0, x1, y1 = bbox_pred
+    dx = float(delta[0]) * BOX_REFINER_BLEND
+    dy = float(delta[1]) * BOX_REFINER_BLEND
+    dw = float(delta[2]) * BOX_REFINER_BLEND
+    dh = float(delta[3]) * BOX_REFINER_BLEND
+    x0, y0, x1, y1 = (float(v) for v in bbox_pred)
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     bw, bh = max(x1 - x0, 1.0), max(y1 - y0, 1.0)
     cx2 = cx + dx * bw
@@ -256,6 +531,20 @@ def _load_state_dict_compat(path: Path, map_location) -> dict:
     return state
 
 
+def _load_template(path: Path) -> list[dict]:
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list) or len(data) != N_CLASES:
+        raise RuntimeError(f"template_bbox.json inválido: se esperaban {N_CLASES} entradas")
+    template = sorted(data, key=lambda r: int(r["id_real"]))
+    for i, expected in enumerate(VERTEBRA_LABELS):
+        if str(template[i]["vertebra"]).upper() != expected:
+            raise RuntimeError(
+                f"template_bbox.json fuera de orden: posición {i} es {template[i]['vertebra']}, esperado {expected}"
+            )
+    return template
+
+
 # ---------------------------------------------------------------------------
 # Adapter principal.
 # ---------------------------------------------------------------------------
@@ -263,8 +552,9 @@ class VertebraPromptBoxRefinerAdapter(ModelPort):
     def __init__(self, device: str = "cpu") -> None:
         self._device = torch.device(device)
         self._prompt_net: Optional[VertebraPromptNet] = None
-        self._box_refiner: Optional[BoxRefiner] = None
+        self._box_refiner: Optional[BoxRefinerNet] = None
         self._sam_predictor = None
+        self._template: Optional[list[dict]] = None
         self._loaded = False
         self._model_version = "not-loaded"
 
@@ -274,15 +564,17 @@ class VertebraPromptBoxRefinerAdapter(ModelPort):
         box_refiner_checkpoint: str,
         sam_base_checkpoint: str,
         medsam_finetuned_checkpoint: str,
+        template_bbox_path: str = "model-pkg/medsam/template_bbox.json",
     ) -> None:
         prompt_path = Path(prompt_net_checkpoint)
         refiner_path = Path(box_refiner_checkpoint)
         sam_path = Path(sam_base_checkpoint)
         medsam_path = Path(medsam_finetuned_checkpoint)
+        template_path = Path(template_bbox_path)
 
-        for p in (prompt_path, refiner_path, sam_path, medsam_path):
+        for p in (prompt_path, refiner_path, sam_path, medsam_path, template_path):
             if not p.exists():
-                raise FileNotFoundError(f"Checkpoint no encontrado: {p}")
+                raise FileNotFoundError(f"Recurso no encontrado: {p}")
 
         # 1) VertebraPromptNet
         self._prompt_net = VertebraPromptNet().to(self._device)
@@ -291,24 +583,30 @@ class VertebraPromptBoxRefinerAdapter(ModelPort):
         self._prompt_net.eval()
 
         # 2) BoxRefiner
-        self._box_refiner = BoxRefiner().to(self._device)
+        self._box_refiner = BoxRefinerNet().to(self._device)
         refiner_state = _load_state_dict_compat(refiner_path, self._device)
         self._box_refiner.load_state_dict(refiner_state, strict=False)
         self._box_refiner.eval()
 
         # 3) MedSAM (segment_anything ViT-B base + pesos finetuneados).
+        # Construimos sin checkpoint para evitar que segment_anything llame a
+        # torch.load() sin map_location (rompe en CPU si los pesos se guardaron
+        # con tensores CUDA). Luego cargamos los pesos manualmente con map_location.
         from segment_anything import SamPredictor, sam_model_registry
 
-        sam_model = sam_model_registry["vit_b"](checkpoint=str(sam_path)).to(self._device)
+        sam_model = sam_model_registry["vit_b"](checkpoint=None).to(self._device)
+        sam_state = _load_state_dict_compat(sam_path, self._device)
+        sam_model.load_state_dict(sam_state, strict=False)
         medsam_state = _load_state_dict_compat(medsam_path, self._device)
         sam_model.load_state_dict(medsam_state, strict=False)
         sam_model.eval()
         self._sam_predictor = SamPredictor(sam_model)
 
+        # 4) Plantilla anatómica (mediana de bboxes del split train).
+        self._template = _load_template(template_path)
+
         self._loaded = True
-        self._model_version = (
-            f"vertebraprompt+boxrefiner+{medsam_path.stem}"
-        )
+        self._model_version = f"vertebraprompt+boxrefiner+{medsam_path.stem}"
 
     def is_loaded(self) -> bool:
         return self._loaded
@@ -320,72 +618,48 @@ class VertebraPromptBoxRefinerAdapter(ModelPort):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_executor, self._sync_predict, image)
 
-    # ------------------------------------------------------------------
-    # Inferencia
-    # ------------------------------------------------------------------
     @torch.no_grad()
     def _sync_predict(self, image: np.ndarray) -> ModelOutput:
         if not self._loaded:
             raise RuntimeError("Modelo no cargado")
-
         t0 = time.perf_counter()
 
-        # El use case entrega image RGB letterboxed a 512×512. Aquí elevamos a
-        # IMG_SIZE para alimentar VertebraPromptNet con la resolución del
-        # notebook, y luego volvemos a la grilla original al construir la mask.
-        H_out, W_out = image.shape[:2]
+        # 1) Letterbox a 1024×1024 RGB (espacio del dataset preprocesado).
+        if image.ndim == 2:
+            image = np.stack([image] * 3, axis=-1)
+        elif image.shape[2] == 4:
+            image = image[:, :, :3]
+        rgb_grid, lb_params = _letterbox_to_grid(image, MEDSAM_IMG_SIZE)
 
-        gray_full = np.array(Image.fromarray(image).convert("L"))
-        gray_resized = np.array(
-            Image.fromarray(gray_full).resize((IMG_SIZE, IMG_SIZE), Image.BILINEAR)
-        ).astype(np.float32)
-        p1, p99 = np.percentile(gray_resized, [1, 99.5])
-        gray_norm = np.clip((gray_resized - p1) / (p99 - p1 + 1e-6), 0, 1)
-        x = torch.from_numpy(gray_norm[None, None, ...].astype(np.float32)).to(self._device)
-
+        # 2) VertebraPromptNet a 512×512 (gris-normalizado por percentiles).
+        x = _imagen_inferencia_tensor(rgb_grid, self._device)
         out = self._prompt_net(x)
-        heat = torch.sigmoid(out["heat"])[0, 0].cpu().numpy()
-        class_heat = torch.sigmoid(out["class_heat"])[0].cpu().numpy()  # (17, H, W)
-        wh = torch.sigmoid(out["wh"])[0].cpu().numpy()                  # (2, H, W)
+        outputs_np = {
+            "heat": torch.sigmoid(out["heat"])[0, 0].cpu().numpy(),
+            "wh": torch.sigmoid(out["wh"])[0].cpu().numpy(),
+            "off": torch.sigmoid(out["off"])[0].cpu().numpy(),
+        }
 
-        # Picos top-N con NMS espacial.
-        peaks = _extract_peaks(heat)
+        # 3) Decodificación anatómica → cajas T1..L5 en grilla 1024.
+        boxes_pred = _prompts_desde_outputs(rgb_grid, outputs_np, self._template)
 
-        # Top-anchor: ordenar por Y ascendente y mapear a T1..L5.
-        peaks_sorted = sorted(peaks, key=lambda p: p["y"])[:N_CLASES]
-
-        boxes_pred: list[tuple[str, list[float]]] = []
-        for label, peak in zip(VERTEBRA_LABELS, peaks_sorted):
-            cx, cy = peak["x"], peak["y"]
-            bw_rel = float(wh[0, cy, cx])
-            bh_rel = float(wh[1, cy, cx])
-            bw = max(bw_rel * IMG_SIZE, 12.0)
-            bh = max(bh_rel * IMG_SIZE, 12.0)
-            bbox = _bbox_clip(
-                [cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2],
-                IMG_SIZE, IMG_SIZE,
-            )
-            boxes_pred.append((label, bbox))
-
-        # BoxRefiner sobre cada caja propuesta.
-        boxes_refined: list[tuple[str, list[float]]] = []
-        gray_uint8 = (gray_norm * 255).astype(np.uint8)
-        for label, bbox in boxes_pred:
-            inp = _build_refiner_input(gray_uint8, bbox).unsqueeze(0).to(self._device)
+        # 4) BoxRefiner por caja (sobre la imagen gris en grilla 1024).
+        gray_grid = np.array(Image.fromarray(rgb_grid).convert("L"))
+        boxes_refined: list[tuple[str, list[int], float]] = []
+        for label, bbox, score in boxes_pred:
+            inp = _build_refiner_input(gray_grid, bbox).unsqueeze(0).to(self._device)
             delta = self._box_refiner(inp)[0].cpu().numpy()
-            refined = _apply_delta(bbox, delta, gray_uint8.shape)
-            boxes_refined.append((label, refined))
+            refined = _apply_delta(bbox, delta, gray_grid.shape)
+            boxes_refined.append((label, refined, score))
 
-        # MedSAM por caja: produce máscara binaria por vértebra y se compone la
-        # máscara multiclase escalada a la grilla de salida (H_out × W_out).
-        rgb_for_sam = np.stack([gray_uint8] * 3, axis=-1)
-        self._sam_predictor.set_image(rgb_for_sam)
+        # 5) MedSAM box_only (sin expansión adicional, "sin_pad").
+        self._sam_predictor.set_image(rgb_grid)
 
-        mask_full = np.zeros((IMG_SIZE, IMG_SIZE), dtype=np.uint8)
-        proba_full = np.zeros((23, IMG_SIZE, IMG_SIZE), dtype=np.float32)
-        proba_full[0] = 1.0
+        mask_grid = np.zeros((MEDSAM_IMG_SIZE, MEDSAM_IMG_SIZE), dtype=np.uint8)
+        proba_grid = np.zeros((N_SERVICE_CLASSES, MEDSAM_IMG_SIZE, MEDSAM_IMG_SIZE), dtype=np.float32)
+        proba_grid[0] = 1.0
 
-        for label, bbox in boxes_refined:
+        for label, bbox, _score_pn in boxes_refined:
             class_id = LABEL_TO_SERVICE_ID[label]
             box_np = np.array(bbox, dtype=np.float32)
             masks, scores, _ = self._sam_predictor.predict(
@@ -393,28 +667,23 @@ class VertebraPromptBoxRefinerAdapter(ModelPort):
                 multimask_output=False,
             )
             m = masks[0].astype(bool)
-            score = float(scores[0]) if scores.size else 0.5
-            mask_full[m] = class_id
-            proba_full[class_id, m] = score
-            proba_full[0, m] = 1.0 - score
+            sam_score = float(scores[0]) if scores.size else 0.5
+            mask_grid[m] = class_id
+            proba_grid[class_id, m] = sam_score
+            proba_grid[0, m] = 1.0 - sam_score
 
-        # Reescalado a la grilla del use case.
-        mask_out = np.array(
-            Image.fromarray(mask_full).resize((W_out, H_out), Image.NEAREST),
-            dtype=np.uint8,
-        )
-        proba_out = np.zeros((23, H_out, W_out), dtype=np.float32)
+        # 6) Deshacer letterbox: recortar área válida y reescalar al espacio del cliente.
+        mask_out = _unletterbox_mask(mask_grid, lb_params, resample=Image.NEAREST)
+        H_out, W_out = mask_out.shape[:2]
+
+        proba_out = np.zeros((N_SERVICE_CLASSES, H_out, W_out), dtype=np.float32)
         proba_out[0] = 1.0
-        for class_id in range(1, 23):
-            proba_band = proba_full[class_id]
-            if proba_band.max() <= 0:
+        for class_id in range(1, N_SERVICE_CLASSES):
+            band = proba_grid[class_id]
+            if band.max() <= 0:
                 continue
-            band_resized = np.array(
-                Image.fromarray((proba_band * 255).astype(np.uint8)).resize(
-                    (W_out, H_out), Image.BILINEAR
-                ),
-                dtype=np.float32,
-            ) / 255.0
+            band_u8 = (band * 255.0).astype(np.uint8)
+            band_resized = _unletterbox_mask(band_u8, lb_params, resample=Image.BILINEAR).astype(np.float32) / 255.0
             proba_out[class_id] = band_resized
             proba_out[0] = np.minimum(proba_out[0], 1.0 - band_resized)
 

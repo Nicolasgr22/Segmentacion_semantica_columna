@@ -512,16 +512,37 @@ body::after {
   min-height: 100%;
 }
 .processing-stage {
+  /* Mismo grid que .result-body para que la imagen ocupe la misma posición
+     visual durante procesamiento y resultado (no hay salto al transicionar). */
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 48px;
-  align-items: center;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: stretch;
   width: 100%;
 }
 
-.scan-frame {
+/* Contenedor centrador análogo a .stage del resultado. */
+.processing-stage-frame {
   position: relative;
+  min-height: 640px;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(79, 195, 247, 0.04), transparent 70%),
+    var(--surf-0);
+  border: 1px solid var(--outline-soft);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.scan-frame {
+  /* Centrado dentro de .processing-stage-frame igual que .comparator dentro
+     de .stage. Aspect-ratio se sobrescribe inline desde JSX con las dims
+     naturales de la imagen subida (cae al default solo antes de cargarla). */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 90%;
   aspect-ratio: 400 / 900;
+  transform: translate(-50%, -50%);
   background: #050a14;
   border-radius: 18px;
   border: 1px solid var(--primary);
@@ -875,8 +896,9 @@ body::after {
   /* aspect-ratio se aplica inline en JSX según las dimensiones reales de la máscara */
   transform-origin: center;
   transform: translate(-50%, -50%);
-  margin-top: 11px;  /* rule offset balance */
-  margin-left: 16px;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: #050a14;
 }
 .comparator img {
   display: block;
@@ -888,7 +910,6 @@ body::after {
   overflow: hidden;
 }
 .xray-layer {
-  border: 1px solid var(--outline);
   background: #050a14;
 }
 .mask-layer {
@@ -954,6 +975,63 @@ body::after {
 }
 .slider-tag.top { top: 12px; }
 .slider-tag.bottom { bottom: 12px; }
+
+/* ───── Bounding box overlay (chip activo: hover/click) ─────
+   Vive dentro de .comparator (mismo aspect ratio que la imagen y mismo
+   transform de pan/zoom), así que las posiciones en % corresponden
+   directamente al espacio de píxeles del bbox que devuelve el backend. */
+.bbox-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.bbox-overlay {
+  position: absolute;
+  border: 2px solid var(--bbox-color, var(--primary));
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 14px var(--bbox-color, var(--primary));
+  animation: bbox-pulse 1.6s ease-in-out infinite;
+  background: color-mix(in oklab, var(--bbox-color, var(--primary)) 6%, transparent);
+}
+@keyframes bbox-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 0 12px var(--bbox-color, var(--primary)); }
+  50%      { box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 0 22px var(--bbox-color, var(--primary)); }
+}
+.bbox-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--bbox-color, var(--primary));
+  color: #050a14;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.bbox-conf {
+  font-weight: 500;
+  font-size: 10px;
+  opacity: 0.85;
+  padding-left: 6px;
+  border-left: 1px solid rgba(5, 10, 20, 0.3);
+}
+/* Si la caja está pegada al borde superior, el tag se mueve adentro
+   (top-left) para no quedar clipeado por el .stage. */
+.bbox-overlay.tag-inside .bbox-label {
+  bottom: auto;
+  top: 2px;
+  left: 2px;
+}
 
 /* HUD overlays */
 .hud {
@@ -1106,6 +1184,13 @@ body::after {
   border: 1px solid transparent;
   transition: 120ms;
 }
+.vert-chip {
+  cursor: pointer;
+}
+.vert-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 .vert-chip:hover, .vert-chip.on {
   background: var(--primary-container);
   color: var(--on-primary-container);
@@ -1114,6 +1199,21 @@ body::after {
 .vert-chip.cervical.on { box-shadow: 0 0 0 1px #4FC3F7, 0 0 12px #4FC3F7; }
 .vert-chip.thoracic.on { box-shadow: 0 0 0 1px #80D8FF, 0 0 12px #80D8FF; }
 .vert-chip.lumbar.on   { box-shadow: 0 0 0 1px #00E5A0, 0 0 12px #00E5A0; }
+
+/* Selección fija (click): borde más grueso y un tick visual con ::after */
+.vert-chip.selected {
+  background: var(--primary);
+  color: #050a14;
+  border-color: var(--primary);
+  font-weight: 700;
+}
+.vert-chip.selected::after {
+  content: "•";
+  margin-left: 3px;
+  font-size: 14px;
+  line-height: 0;
+  vertical-align: middle;
+}
 
 .export-buttons {
   display: grid;
@@ -1149,7 +1249,7 @@ body::after {
   .result-body { grid-template-columns: 1fr; }
   .stage { min-height: 720px; }
   .processing-stage { grid-template-columns: 1fr; gap: 24px; }
-  .scan-frame { max-width: 240px; margin: 0 auto; }
+  .processing-stage-frame { min-height: 480px; }
   .appbar-nav { display: none; }
   .appbar-subtitle { display: none; }
 }

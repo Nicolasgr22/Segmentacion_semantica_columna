@@ -1,5 +1,18 @@
 locals {
-  frontend_dir = "${path.module}/../../frontend"
+  frontend_dir = "${path.module}/../frontend"
+}
+
+# ── config.js generado por terraform: inyecta BACKEND_URL al frontend ───────
+# Este archivo se carga en index.html ANTES de app.jsx y setea
+# `window.BACKEND_URL` apuntando a la EC2 Spot. Cambia automáticamente cuando
+# la IP de la instancia cambia (spot reclamado → nueva IP).
+resource "local_file" "frontend_config" {
+  filename = "${local.frontend_dir}/config.js"
+  content  = <<-EOT
+    // Auto-generado por terraform. NO editar a mano.
+    // Origen: services_ec2.tf (aws_instance.svc.public_ip)
+    window.BACKEND_URL = "http://${aws_instance.svc.public_ip}${var.host_port == 80 ? "" : ":${var.host_port}"}";
+  EOT
 }
 
 # ── Bucket público para el frontend ─────────────────────────────────────────
@@ -27,7 +40,7 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
   index_document { suffix = "index.html" }
-  error_document { key    = "index.html" }
+  error_document { key = "index.html" }
 }
 
 resource "aws_s3_bucket_policy" "frontend_public_read" {
@@ -56,6 +69,8 @@ resource "null_resource" "deploy_frontend" {
       for f in sort(fileset(local.frontend_dir, "**"))
       : filemd5("${local.frontend_dir}/${f}")
     ]))
+    # Re-sync forzado si la IP del backend cambia (spot reclamado).
+    backend_ip = aws_instance.svc.public_ip
   }
 
   provisioner "local-exec" {
@@ -66,5 +81,6 @@ resource "null_resource" "deploy_frontend" {
     aws_s3_bucket.frontend,
     aws_s3_bucket_policy.frontend_public_read,
     aws_s3_bucket_website_configuration.frontend,
+    local_file.frontend_config,
   ]
 }

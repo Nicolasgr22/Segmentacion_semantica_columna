@@ -1,0 +1,155 @@
+[
+  {
+    "vertebra": "T1",
+    "id_real": 1,
+    "cx_rel": 0.501221,
+    "cy_rel": 0.133301,
+    "w_rel": 0.055176,
+    "h_rel": 0.030273,
+    "n_samples": 34
+  },
+  {
+    "vertebra": "T2",
+    "id_real": 2,
+    "cx_rel": 0.501709,
+    "cy_rel": 0.167969,
+    "w_rel": 0.054688,
+    "h_rel": 0.035156,
+    "n_samples": 36
+  },
+  {
+    "vertebra": "T3",
+    "id_real": 3,
+    "cx_rel": 0.494873,
+    "cy_rel": 0.21167,
+    "w_rel": 0.054199,
+    "h_rel": 0.040527,
+    "n_samples": 36
+  },
+  {
+    "vertebra": "T4",
+    "id_real": 4,
+    "cx_rel": 0.488281,
+    "cy_rel": 0.243652,
+    "w_rel": 0.052734,
+    "h_rel": 0.042969,
+    "n_samples": 37
+  },
+  {
+    "vertebra": "T5",
+    "id_real": 5,
+    "cx_rel": 0.486816,
+    "cy_rel": 0.281006,
+    "w_rel": 0.053711,
+    "h_rel": 0.043457,
+    "n_samples": 36
+  },
+  {
+    "vertebra": "T6",
+    "id_real": 6,
+    "cx_rel": 0.482422,
+    "cy_rel": 0.315918,
+    "w_rel": 0.057617,
+    "h_rel": 0.044922,
+    "n_samples": 35
+  },
+  {
+    "vertebra": "T7",
+    "id_real": 7,
+    "cx_rel": 0.492188,
+    "cy_rel": 0.344238,
+    "w_rel": 0.0625,
+    "h_rel": 0.040039,
+    "n_samples": 35
+  },
+  {
+    "vertebra": "T8",
+    "id_real": 8,
+    "cx_rel": 0.493652,
+    "cy_rel": 0.382324,
+    "w_rel": 0.060547,
+    "h_rel": 0.042969,
+    "n_samples": 35
+  },
+  {
+    "vertebra": "T9",
+    "id_real": 9,
+    "cx_rel": 0.492676,
+    "cy_rel": 0.420898,
+    "w_rel": 0.06543,
+    "h_rel": 0.050781,
+    "n_samples": 33
+  },
+  {
+    "vertebra": "T10",
+    "id_real": 10,
+    "cx_rel": 0.490234,
+    "cy_rel": 0.470215,
+    "w_rel": 0.068359,
+    "h_rel": 0.053711,
+    "n_samples": 31
+  },
+  {
+    "vertebra": "T11",
+    "id_real": 11,
+    "cx_rel": 0.493164,
+    "cy_rel": 0.499023,
+    "w_rel": 0.071289,
+    "h_rel": 0.049805,
+    "n_samples": 29
+  },
+  {
+    "vertebra": "T12",
+    "id_real": 12,
+    "cx_rel": 0.492676,
+    "cy_rel": 0.54541,
+    "w_rel": 0.074219,
+    "h_rel": 0.053711,
+    "n_samples": 27
+  },
+  {
+    "vertebra": "L1",
+    "id_real": 13,
+    "cx_rel": 0.495605,
+    "cy_rel": 0.585449,
+    "w_rel": 0.075195,
+    "h_rel": 0.050781,
+    "n_samples": 24
+  },
+  {
+    "vertebra": "L2",
+    "id_real": 14,
+    "cx_rel": 0.502441,
+    "cy_rel": 0.639893,
+    "w_rel": 0.075195,
+    "h_rel": 0.053711,
+    "n_samples": 22
+  },
+  {
+    "vertebra": "L3",
+    "id_real": 15,
+    "cx_rel": 0.506348,
+    "cy_rel": 0.697998,
+    "w_rel": 0.07959,
+    "h_rel": 0.053711,
+    "n_samples": 22
+  },
+  {
+    "vertebra": "L4",
+    "id_real": 16,
+    "cx_rel": 0.499756,
+    "cy_rel": 0.744629,
+    "w_rel": 0.081543,
+    "h_rel": 0.052246,
+    "n_samples": 20
+  },
+  {
+    "vertebra": "L5",
+    "id_real": 17,
+    "cx_rel": 0.492188,
+    "cy_rel": 0.812256,
+    "w_rel": 0.087891,
+    "h_rel": 0.05127,
+    "n_samples": 16
+  }
+]

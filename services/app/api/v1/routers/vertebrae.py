@@ -28,13 +28,13 @@ router = APIRouter(prefix="/xrays", tags=["xrays"])
     },
     summary="Crear análisis de radiografía de columna vertebral",
     description=(
-        "Recibe una imagen (PNG o JPEG) de radiografía de columna, aplica preprocesamiento "
-        "(CLAHE + letterbox 512×512) y retorna la segmentación de vértebras con "
-        "métricas de confianza por región."
+        "Recibe una imagen (PNG o JPEG) de radiografía de columna, aplica letterbox a "
+        "1024×1024 (preservando aspect ratio) y normalización por percentiles 1/99.5; "
+        "retorna la segmentación de vértebras T1–L5 con métricas de confianza por región."
     ),
 )
 async def create_analysis(
-    file: UploadFile = File(..., description="Imagen PNG o JPEG, resolución mínima 512×512 px"),
+    file: UploadFile = File(..., description="Imagen PNG o JPEG"),
     model: ModelName = Form(
         default=ModelName.MEDSAM,
         description="Modelo de segmentación a utilizar",

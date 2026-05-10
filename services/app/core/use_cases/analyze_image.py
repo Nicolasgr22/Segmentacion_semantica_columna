@@ -52,20 +52,19 @@ class AnalyzeImageUseCase:
         t_start = time.perf_counter()
         steps: list[str] = []
 
-        # 1. Validar y decodificar (la imagen llega tal cual al adapter,
-        #    sin redimensionar ni CLAHE: esos pasos los hace el adapter
-        #    replicando el preprocesamiento exacto del notebook 06).
         image_rgb = self._validate_and_decode(image_bytes)
         steps.append("Decodificación de imagen")
 
-        # 2. Inferencia (el adapter aplica resize a 1024 + normalización
-        #    por percentiles 1/99.5, idéntico al notebook ganador).
+        # 2. Inferencia (el adapter aplica letterbox 1024×1024 + normalización
+        #    por percentiles 1/99.5, decodificación DP anatómica, BoxRefiner y
+        #    MedSAM box_only — replica el notebook 06).
         model_output = await self._model.predict(image_rgb)
-        steps.append("Resize 1024×1024 + normalización por percentiles")
-        steps.append("VertebraPrompt-Net: heatmap + cajas T1–L5")
-        steps.append("BoxRefiner: corrección local de cajas")
-        steps.append("MedSAM por caja → máscaras binarias")
-        steps.append("Composición de máscara multi-clase")
+        steps.append("Letterbox 1024×1024 + normalización por percentiles")
+        steps.append("VertebraPrompt-Net (512×512): heatmap + wh + offset")
+        steps.append("DP anatómico → cajas T1–L5 con plantilla mediana")
+        steps.append("BoxRefiner: corrección local de cajas (192×192)")
+        steps.append("MedSAM box_only por caja → máscaras binarias")
+        steps.append("Composición y reverse-letterbox al espacio original")
 
         # 4. Post-procesamiento
         vertebrae = build_vertebrae_from_mask(model_output.mask, model_output.probabilities)
@@ -100,11 +99,11 @@ class AnalyzeImageUseCase:
     def _validate_and_decode(self, image_bytes: bytes) -> np.ndarray:
         """Valida formato y devuelve la imagen RGB tal como vino.
 
-        El adapter se encarga del resize a 1024 y la normalización por
-        percentiles, replicando el preprocesamiento del notebook 06.
-        Aquí solo verificamos: archivo válido + formato soportado +
-        que no sea trivialmente pequeña (arbitrario: ≥32 px por lado
-        para descartar thumbnails y errores obvios).
+        El adapter se encarga del letterbox 1024×1024 (preservando aspect
+        ratio) y la normalización por percentiles 1/99.5, replicando el
+        preprocesamiento del notebook 06. Aquí solo verificamos: archivo
+        válido + formato soportado + que no sea trivialmente pequeña
+        (arbitrario: ≥32 px por lado para descartar thumbnails).
         """
         try:
             img = Image.open(io.BytesIO(image_bytes))

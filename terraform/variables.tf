@@ -39,3 +39,28 @@ variable "project_name" {
   type        = string
   default     = "maia-proyecto-final"
 }
+
+# ── Servicio EC2 Spot ────────────────────────────────────────────────────────
+
+variable "instance_type" {
+  description = "Tipo de EC2 para el servicio. t3.medium = 4GB / 2vCPU (mínimo viable para SAM ViT-B en CPU). t3.large si el primer arranque OOM."
+  type        = string
+  default     = "t3.medium"
+}
+
+variable "host_port" {
+  description = "Puerto público en la instancia (mapeado al 8000 del contenedor)"
+  type        = number
+  default     = 80
+}
+
+variable "cors_origins" {
+  description = "Orígenes permitidos por CORS en el backend. Incluye S3 website y localhost."
+  type        = list(string)
+  default = [
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://anferiro-maia-proyecto-final-frontend.s3-website-us-east-1.amazonaws.com",
+  ]
+}
