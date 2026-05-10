@@ -85,15 +85,30 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # ec2:Describe*, RunInstances, CreateSecurityGroup y la familia spot solo
+      # soportan Resource="*" en IAM. Lo scopeamos por condición a la región del
+      # proyecto y a tags del proyecto, así si el role se filtra el blast radius
+      # queda limitado a recursos taggeados/region propia.
       {
-        Sid    = "EC2Manage"
+        Sid    = "EC2DescribeReadOnly"
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*",
+          "ec2:GetConsoleOutput",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = { "aws:RequestedRegion" = var.aws_region }
+        }
+      },
+      {
+        Sid    = "EC2WriteScopedToProject"
         Effect = "Allow"
         Action = [
           "ec2:RunInstances",
           "ec2:TerminateInstances",
           "ec2:StartInstances",
           "ec2:StopInstances",
-          "ec2:Describe*",
           "ec2:CreateSecurityGroup",
           "ec2:DeleteSecurityGroup",
           "ec2:AuthorizeSecurityGroupIngress",
@@ -107,9 +122,19 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
           "ec2:CancelSpotInstanceRequests",
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = { "aws:RequestedRegion" = var.aws_region }
+        }
+      },
+      # ECR sí soporta ARN-level. Limitamos a repos del proyecto.
+      {
+        Sid      = "ECRGetAuthGlobal"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
       },
       {
-        Sid    = "ECRManage"
+        Sid    = "ECRManageProjectRepo"
         Effect = "Allow"
         Action = [
           "ecr:CreateRepository",
@@ -126,7 +151,6 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
           "ecr:SetRepositoryPolicy",
           "ecr:GetRepositoryPolicy",
           "ecr:DeleteRepositoryPolicy",
-          "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
@@ -138,7 +162,7 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
           "ecr:ListImages",
           "ecr:DescribeImages",
         ]
-        Resource = "*"
+        Resource = "arn:aws:ecr:${var.aws_region}:${var.aws_account_id}:repository/${var.project_name}-*"
       },
       {
         Sid    = "IAMServiceRoleManage"

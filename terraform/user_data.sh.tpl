@@ -3,6 +3,9 @@
 # - Instala Docker
 # - Login en ECR + pull de la imagen
 # - Corre el contenedor en :80 con restart=always
+#
+# image_hash: ${image_hash}
+# (cambiar este hash fuerza la recreación de la EC2 vía user_data_replace_on_change)
 set -euxo pipefail
 
 LOG=/var/log/vertebra-bootstrap.log
@@ -28,9 +31,25 @@ aws ecr get-login-password --region "$REGION" \
 #    posterior al push lo arranca (vía SSM o re-launching la instancia).
 if docker pull "${ecr_image}:latest"; then
   docker rm -f vertebra-svc 2>/dev/null || true
+  # Hardening del contenedor:
+  # - --read-only + tmpfs : root fs inmutable; solo /tmp escribible (en RAM, 256M).
+  # - --cap-drop=ALL      : sin capabilities de Linux. La app no necesita ninguna.
+  # - --security-opt no-new-privileges : evita escalada via setuid.
+  # - --pids-limit        : limita fork bombs.
+  # - --memory / --cpus   : t3.medium tiene 4G/2vCPU; dejamos margen al host.
+  # - --user 1000:1000    : redundancia (Dockerfile ya hace USER vertebra).
   docker run -d \
     --name vertebra-svc \
     --restart=always \
+    --read-only \
+    --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+    --cap-drop=ALL \
+    --security-opt no-new-privileges \
+    --pids-limit 256 \
+    --memory=3500m \
+    --memory-swap=3500m \
+    --cpus=1.8 \
+    --user 1000:1000 \
     -p ${host_port}:8000 \
     -e PORT=8000 \
     -e CORS_ORIGINS='${cors_origins_json}' \

@@ -8,6 +8,27 @@
 #  - Sin EKS (control plane $73/mes innecesario para un único servicio).
 # ──────────────────────────────────────────────────────────────────────────────
 
+# 0. Hash de las fuentes del servicio: dispara build+push cuando algo cambia.
+#    Excluye model-pkg/ (1.5 GB de .pth/.pt — hashearlos en cada plan es lento;
+#    si cambian los modelos hay que tocar manualmente otro archivo o ejecutar
+#    `terraform taint null_resource.deploy_image && terraform apply`).
+locals {
+  service_files = [
+    for f in sort(fileset("${path.module}/../services", "**"))
+    : f
+    if !startswith(f, "model-pkg/")
+    && !startswith(f, ".pytest_cache/")
+    && !startswith(f, "tests/")
+    && !startswith(f, ".venv/")
+    && f != ".env"
+    && !endswith(f, ".pyc")
+  ]
+  service_source_hash = sha256(join("", [
+    for f in local.service_files
+    : filemd5("${path.module}/../services/${f}")
+  ]))
+}
+
 # 1. AMI Amazon Linux 2023 más reciente
 data "aws_ami" "al2023" {
   most_recent = true
@@ -78,6 +99,31 @@ resource "aws_ecr_lifecycle_policy" "svc" {
       action = { type = "expire" }
     }]
   })
+}
+
+# 3.b Build + push automático de la imagen cuando cambian las fuentes.
+#     Se ejecuta ANTES que aws_instance.svc (depends_on abajo en la EC2)
+#     para que el bootstrap encuentre la imagen en ECR al hacer pull.
+resource "null_resource" "deploy_image" {
+  triggers = {
+    source_hash = local.service_source_hash
+    ecr_repo    = aws_ecr_repository.svc.repository_url
+  }
+
+  provisioner "local-exec" {
+    command = "${path.module}/../services/scripts/deploy_ecr.sh"
+    environment = {
+      ECR_REGISTRY = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+      ECR_REPO     = aws_ecr_repository.svc.repository_url
+      AWS_REGION   = var.aws_region
+      IMAGE_TAG    = "latest"
+    }
+  }
+
+  depends_on = [
+    aws_ecr_repository.svc,
+    aws_ecr_lifecycle_policy.svc,
+  ]
 }
 
 # 4. IAM: instance profile que permite a la EC2 hacer pull desde ECR
@@ -152,11 +198,46 @@ resource "aws_security_group" "svc" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Egress restringido: solo lo que el nodo necesita realmente para arrancar
+  # y operar. Bloquea tráfico arbitrario en puertos no estándar (defensa
+  # contra C2 si el container se comprometiera).
   egress {
-    description = "Salida total (pull ECR, dnf update, etc.)"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS (ECR, AWS APIs, dnf mirrors)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "HTTP (algunos mirrors dnf antes del redirect a HTTPS)"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "DNS UDP"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "DNS TCP (fallback)"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "NTP (clock sync)"
+    from_port   = 123
+    to_port     = 123
+    protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -189,7 +270,13 @@ resource "aws_instance" "svc" {
     ecr_image         = aws_ecr_repository.svc.repository_url
     host_port         = var.host_port
     cors_origins_json = jsonencode(var.cors_origins)
+    # Cuando cambia el hash de fuentes, cambia el user_data → forza recreación
+    # de la EC2 para que haga pull de la imagen recién publicada.
+    image_hash = local.service_source_hash
   }))
+
+  # Cualquier cambio en user_data (incluido image_hash) recrea la instancia.
+  user_data_replace_on_change = true
 
   # Disco: 30 GB es suficiente para imagen ~3GB + capas + logs.
   root_block_device {
@@ -216,4 +303,7 @@ resource "aws_instance" "svc" {
   lifecycle {
     create_before_destroy = false
   }
+
+  # Asegura que la imagen exista en ECR antes de que la EC2 intente el pull.
+  depends_on = [null_resource.deploy_image]
 }
