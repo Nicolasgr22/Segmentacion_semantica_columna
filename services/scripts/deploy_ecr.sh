@@ -23,15 +23,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TERRAFORM_DIR="$(cd "$SERVICE_DIR/../terraform" && pwd)"
 
-TAG="${1:-latest}"
+TAG="${IMAGE_TAG:-${1:-latest}}"
 
-echo "▸ Leyendo outputs de terraform..."
-ECR_REGISTRY=$(terraform -chdir="$TERRAFORM_DIR" output -raw ecr_registry)
-ECR_REPO=$(terraform -chdir="$TERRAFORM_DIR" output -raw ecr_repository_url)
-AWS_REGION=$(terraform -chdir="$TERRAFORM_DIR" output -raw -json 2>/dev/null \
-  | grep -o '"aws_region":[^,]*' || echo '')
+# Si las env vars vienen seteadas (caso: local-exec desde terraform), las
+# usamos directamente. Caso contrario, leemos de `terraform output`.
+if [ -z "${ECR_REGISTRY:-}" ] || [ -z "${ECR_REPO:-}" ]; then
+  echo "▸ Leyendo outputs de terraform..."
+  ECR_REGISTRY=$(terraform -chdir="$TERRAFORM_DIR" output -raw ecr_registry)
+  ECR_REPO=$(terraform -chdir="$TERRAFORM_DIR" output -raw ecr_repository_url)
+fi
 
-# Si no hay output de region (no lo expusimos), lo deducimos del registry
+# Region: env > deducir del registry
 if [ -z "${AWS_REGION:-}" ]; then
   AWS_REGION=$(echo "$ECR_REGISTRY" | sed -E 's/.*\.dkr\.ecr\.([^.]+)\.amazonaws\.com/\1/')
 fi

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from app.api.v1.schemas.requests import ModelName
 from app.api.v1.schemas.responses import AnalyzeResponse, ErrorResponse, analysis_to_response
@@ -10,6 +10,7 @@ from app.core.domain.ports.model_port import ModelPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase, InvalidImageError
 from app.dependencies import get_model_dispatch, get_storage_adapter
+from app.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ router = APIRouter(prefix="/xrays", tags=["xrays"])
         "retorna la segmentación de vértebras T1–L5 con métricas de confianza por región."
     ),
 )
+@limiter.limit(settings.rate_limit_analyze)
 async def create_analysis(
+    request: Request,
     file: UploadFile = File(..., description="Imagen PNG o JPEG"),
     model: ModelName = Form(
         default=ModelName.MEDSAM,

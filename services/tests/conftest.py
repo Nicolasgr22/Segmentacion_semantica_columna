@@ -19,6 +19,11 @@ from app.core.domain.ports.model_port import ModelOutput, ModelPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.dependencies import get_model_adapter, get_storage_adapter
 from app.main import app
+from app.rate_limit import limiter
+
+# Desactivar rate limiting en TODAS las pruebas: queremos validar lógica de
+# negocio, no el rate limiter (que se prueba aparte si hace falta).
+limiter.enabled = False
 
 
 @pytest.fixture

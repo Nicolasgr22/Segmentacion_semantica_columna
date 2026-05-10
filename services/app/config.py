@@ -22,6 +22,11 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5500", "http://127.0.0.1:5500"]
 
+    # Rate limiting (slowapi). Default global aplica a todos los endpoints; el de
+    # análisis es más estricto porque cada request consume CPU/RAM por ~30s.
+    rate_limit_default: str = "120/minute"
+    rate_limit_analyze: str = "5/minute"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

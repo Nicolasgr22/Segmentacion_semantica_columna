@@ -3,10 +3,20 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routers import export, health, models, vertebrae
 from app.config import settings
 from app.dependencies import get_model_adapter
+from app.rate_limit import limiter
+
+# Cap absoluto al tamaño de imagen que Pillow va a decodificar. Por default Pillow
+# solo emite warning >89M px; sin límite habilita "decompression bombs".
+# 50 MP = 7000×7000 ≈ cubre cualquier radiografía clínica realista (~3000×4000).
+Image.MAX_IMAGE_PIXELS = 50_000_000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,10 +46,16 @@ app = FastAPI(
     ),
     version=settings.app_version,
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    # Docs interactivas (Swagger/ReDoc/OpenAPI) deshabilitadas en producción
+    # para evitar enumeración de endpoints. Se exponen solo si DEBUG=True.
+    docs_url="/api/docs" if settings.debug else None,
+    redoc_url="/api/redoc" if settings.debug else None,
+    openapi_url="/api/openapi.json" if settings.debug else None,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
