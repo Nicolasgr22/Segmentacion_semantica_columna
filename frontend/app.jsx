@@ -5,7 +5,10 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 // ───────────────────────── Configuración del backend ─────────────────────────
-const BACKEND_URL = window.BACKEND_URL || 'http://localhost:8000';
+// `??` no `||`: cuando estamos detrás de CloudFront, config.js setea
+// BACKEND_URL = "" para usar rutas relativas same-origin. Con `||` el string
+// vacío sería falsy y caeríamos al fallback localhost.
+const BACKEND_URL = window.BACKEND_URL ?? 'http://localhost:8000';
 const API_BASE = `${BACKEND_URL}/api/vertebraai`;
 
 // ───────────────────────── Iconos (Material-style outline) ─────────────────────────

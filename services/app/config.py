@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 50
     inference_timeout_s: int = 60
 
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5500", "http://127.0.0.1:5500"]
+    cors_origins: list[str] = ["*"]
 
     # Rate limiting (slowapi). Default global aplica a todos los endpoints; el de
     # análisis es más estricto porque cada request consume CPU/RAM por ~30s.

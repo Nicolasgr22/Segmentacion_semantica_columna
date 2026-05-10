@@ -55,12 +55,17 @@ output "service_public_ip" {
   value       = aws_instance.svc.public_ip
 }
 
-output "backend_url" {
-  description = "URL del servicio FastAPI (la usa el frontend en window.BACKEND_URL)"
+output "backend_url_direct" {
+  description = "URL HTTP directa al backend (sin CloudFront). Útil para debug/curl."
   value       = "http://${aws_instance.svc.public_ip}${var.host_port == 80 ? "" : ":${var.host_port}"}"
 }
 
+output "backend_url_cloudfront" {
+  description = "URL HTTPS del backend servida por CloudFront (la que usa el frontend)"
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}/api"
+}
+
 output "service_health_check" {
-  description = "Curl para verificar que el servicio está arriba"
-  value       = "curl http://${aws_instance.svc.public_ip}${var.host_port == 80 ? "" : ":${var.host_port}"}/api/vertebraai/health"
+  description = "Curl para verificar que el servicio está arriba (vía CloudFront)"
+  value       = "curl https://${aws_cloudfront_distribution.frontend.domain_name}/api/vertebraai/health"
 }

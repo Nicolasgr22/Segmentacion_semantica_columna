@@ -3,15 +3,17 @@ locals {
 }
 
 # ── config.js generado por terraform: inyecta BACKEND_URL al frontend ───────
-# Este archivo se carga en index.html ANTES de app.jsx y setea
-# `window.BACKEND_URL` apuntando a la EC2 Spot. Cambia automáticamente cuando
-# la IP de la instancia cambia (spot reclamado → nueva IP).
+# Como el frontend y el backend se sirven detrás del MISMO CloudFront
+# (frontend = default behavior, backend = /api/*), BACKEND_URL queda vacío
+# para que `${BACKEND_URL}/api/...` resuelva a una ruta relativa same-origin.
+# Esto elimina mixed-content y CORS, y hace que el cambio de IP del spot sea
+# transparente para el browser (CloudFront actualiza el origin vía terraform).
 resource "local_file" "frontend_config" {
   filename = "${local.frontend_dir}/config.js"
   content  = <<-EOT
     // Auto-generado por terraform. NO editar a mano.
-    // Origen: services_ec2.tf (aws_instance.svc.public_ip)
-    window.BACKEND_URL = "http://${aws_instance.svc.public_ip}${var.host_port == 80 ? "" : ":${var.host_port}"}";
+    // Backend se sirve detrás del mismo CloudFront en /api/* → ruta relativa.
+    window.BACKEND_URL = "";
   EOT
 }
 
