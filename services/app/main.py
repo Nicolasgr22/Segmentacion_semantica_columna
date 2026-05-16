@@ -60,7 +60,11 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    # `allow_credentials=True` con `allow_origins=["*"]` rompe CORS:
+    # el spec exige una origin específica cuando hay credenciales. La API
+    # no usa cookies ni auth — todo va por multipart sin credentials —
+    # así que lo dejamos en False y mantenemos el wildcard utilizable.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

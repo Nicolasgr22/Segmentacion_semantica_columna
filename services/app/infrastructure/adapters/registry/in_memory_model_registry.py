@@ -67,11 +67,64 @@ _VERTEBRAPROMPT_BOXREFINER = ModelCard(
 )
 
 
+# Métricas reportadas en el notebook
+# notebooks/unet/SegmentacionSemanticaImagenes_UNet_Exp_BPaper_MLFlow.ipynb
+# para Experimento B (val mean K-fold).
+_PROGRESSIVE_UNET_METRICS = [
+    ExperimentMetric(
+        name="dice_binary",
+        value=0.8250,
+        description="Dice binario (vértebra vs fondo), val mean K-fold (4 folds)",
+    ),
+    ExperimentMetric(
+        name="iou_binary",
+        value=0.7077,
+        description="IoU binario (vértebra vs fondo), val mean K-fold (4 folds)",
+    ),
+]
+
+
+_PROGRESSIVE_UNET_BINARY = ModelCard(
+    id="progressive-unet-binary",
+    display_name="Progressive U-Net (paper-like, binario)",
+    description=(
+        "U-Net binaria con deep-supervision (3 side outputs) que reproduce el "
+        "experimento del paper 'Analysis of Scoliosis'. Entrenada en grayscale "
+        "256×512 con loss BCE+Dice. El modelo distingue vértebra vs fondo "
+        "pero NO identifica anatómicamente T1..L5; para encajar en el contrato "
+        "multi-clase del servicio, el adapter hace un band-split top-to-bottom "
+        "del foreground en 17 bandas etiquetadas T1..L5."
+    ),
+    architecture="Progressive U-Net (4 niveles, deep-supervision, paper-like)",
+    task="binary_vertebra_segmentation",
+    classes=["vertebra"],
+    checkpoints=[
+        "model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth",
+    ],
+    metrics=_PROGRESSIVE_UNET_METRICS,
+    dataset="MaIA Scoliosis (máscara binarizada: cualquier vértebra → 1)",
+    notebook="notebooks/unet/SegmentacionSemanticaImagenes_UNet_Exp_BPaper_MLFlow.ipynb",
+    status="active",
+    extra={
+        "experiment": "B",
+        "input_size": "1x256x512",
+        "input_channels": "1 (grayscale)",
+        "threshold": "0.5 sobre sigmoid(logits)",
+        "loss": "BCE + Dice",
+        "remap_strategy": "band-split top-to-bottom → T1..L5 (IDs 6..22)",
+    },
+)
+
+
 class InMemoryModelRegistry(ModelRegistryPort):
     """Registro en memoria con los modelos publicados por el servicio."""
 
     def __init__(self, models: Optional[list[ModelCard]] = None) -> None:
-        seed = models if models is not None else [_VERTEBRAPROMPT_BOXREFINER]
+        seed = (
+            models
+            if models is not None
+            else [_VERTEBRAPROMPT_BOXREFINER, _PROGRESSIVE_UNET_BINARY]
+        )
         self._by_id: dict[str, ModelCard] = {m.id: m for m in seed}
 
     async def list_models(self) -> list[ModelCard]:

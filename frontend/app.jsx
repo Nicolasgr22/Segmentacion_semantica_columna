@@ -78,8 +78,41 @@ function AppBar({ onReset, onToggleTheme, theme, modelVersion }) {
   );
 }
 
+// ───────────────────────── Tarjeta de modelo seleccionable ─────────────────────────
+// Render de un ModelCard del catálogo /models. El click levanta `onClick` para
+// que el padre actualice `selectedModelId`. Mostramos hasta 3 métricas para
+// que el KPI row entre con cualquier modelo (medsam tiene 4, unet binario 2).
+function ModelCard({ model, selected, onClick }) {
+  const kpis = (model.metrics || []).slice(0, 3);
+  return (
+    <button
+      type="button"
+      className={`model-card ${selected ? 'selected' : ''}`}
+      onClick={onClick}
+      aria-pressed={selected}
+    >
+      <div className="model-card-header">
+        <Icon name="bolt" size={18} />
+        <h3 className="model-card-title">{model.display_name}</h3>
+        {selected && <Icon name="check" size={16} className="model-card-check" />}
+      </div>
+      <p className="model-card-desc">{model.description}</p>
+      {kpis.length > 0 && (
+        <div className="kpi-row model-card-kpis">
+          {kpis.map((m) => (
+            <div key={m.name}>
+              <span>{m.name.replace(/_/g, ' ')}</span>
+              <b>{m.value.toFixed(3)}</b>
+            </div>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
+
 // ───────────────────────── Drag & Drop ─────────────────────────
-function UploadZone({ onUpload }) {
+function UploadZone({ onUpload, models, selectedModelId, onSelectModel }) {
   const [drag, setDrag] = useState(false);
   const fileInput = useRef(null);
 
@@ -133,20 +166,23 @@ function UploadZone({ onUpload }) {
       </div>
 
       <div className="upload-side">
-        <div className="info-card">
-          <div className="info-card-header">
+        <div className="model-cards">
+          <div className="model-cards-header">
             <Icon name="bolt" size={18} />
-            <span>Sobre el modelo</span>
+            <span>Selecciona un modelo</span>
           </div>
-          <p>
-            Pipeline 3-stage: <b>VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B</b>.
-            Detecta y segmenta hasta 22 vértebras (C3–L5) en radiografías AP.
-          </p>
-          <div className="kpi-row">
-            <div><span>Dice estricto</span><b>0.553</b></div>
-            <div><span>Dice flexible</span><b>0.768</b></div>
-            <div><span>IoU estricto</span><b>0.479</b></div>
-          </div>
+          {(!models || models.length === 0) ? (
+            <div className="info-card subtle"><p>Cargando modelos…</p></div>
+          ) : (
+            models.map((m) => (
+              <ModelCard
+                key={m.id}
+                model={m}
+                selected={m.id === selectedModelId}
+                onClick={() => onSelectModel(m.id)}
+              />
+            ))
+          )}
         </div>
 
         <div className="info-card subtle">
@@ -287,7 +323,9 @@ function ErrorScreen({ error, onRetry }) {
 function ResultView({ result, fileUrl, filename, onNew }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [hoveredId, setHoveredId] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
+  // Multi-select de vértebras: Set para que React detecte cambios al hacer
+  // copy-on-write (mutar el mismo Set no dispara re-render).
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -356,15 +394,27 @@ function ResultView({ result, fileUrl, filename, onNew }) {
     { key: 'lumbar',   label: 'Lumbar',   range: 'L1 – L5' },
   ];
 
-  // Vértebra activa para mostrar bounding box: hover gana sobre selección
-  // (al pasar el mouse sobre otra chip preview esa, al salir vuelve a la
-  // seleccionada con click). Solo se muestra si la vértebra fue detectada
-  // y el backend devolvió bounding box.
-  const activeId = hoveredId ?? selectedId;
-  const activeVert = activeId
-    ? vertebrae.find(v => v.id === activeId && v.detected && v.bounding_box)
-    : null;
-  const toggleSelected = (id) => setSelectedId(prev => (prev === id ? null : id));
+  // Conjunto de vértebras a dibujar sobre la máscara: las seleccionadas con
+  // click + la del hover (si no estaba ya). Solo se incluyen las detectadas
+  // con bounding_box. El hover se marca aparte para darle styling más fuerte.
+  const activeBoxes = (() => {
+    const byId = new Map(vertebrae.map(v => [v.id, v]));
+    const ids = new Set(selectedIds);
+    if (hoveredId) ids.add(hoveredId);
+    return Array.from(ids)
+      .map(id => byId.get(id))
+      .filter(v => v && v.detected && v.bounding_box)
+      .map(v => ({ vert: v, isHovered: v.id === hoveredId }));
+  })();
+
+  const toggleSelected = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectableCount = vertebrae.filter(v => v.detected && v.bounding_box).length;
 
   // Descarga de exports vía endpoint del backend
   const downloadExport = (format) => {
@@ -482,44 +532,54 @@ function ResultView({ result, fileUrl, filename, onNew }) {
               <div className="slider-tag bottom">SEGMENTADO</div>
             </div>
 
-            {/* Bounding-box overlay de la vértebra activa (hover/click en chip).
-                Las coords vienen en píxeles del espacio original (lo que
-                devuelve el backend tras reverse-letterbox); el comparator
-                tiene el aspect ratio idéntico, así que basta con
-                porcentajes. */}
-            {activeVert && (() => {
-              const bb = activeVert.bounding_box;
-              const W = mask.dimensions.width;
-              const H = mask.dimensions.height;
-              const leftPct = (bb.x_min / W) * 100;
-              const topPct = (bb.y_min / H) * 100;
-              const widthPct = ((bb.x_max - bb.x_min) / W) * 100;
-              const heightPct = ((bb.y_max - bb.y_min) / H) * 100;
-              // Si la caja está muy pegada al borde superior, mostrar el
-              // tag dentro de la caja (top-left) en vez de arriba.
-              const labelInside = topPct < 5;
-              return (
-                <div className="bbox-layer">
-                  <div
-                    className={`bbox-overlay ${labelInside ? 'tag-inside' : ''}`}
-                    style={{
-                      left: `${leftPct}%`,
-                      top: `${topPct}%`,
-                      width: `${widthPct}%`,
-                      height: `${heightPct}%`,
-                      '--bbox-color': regionColors[activeVert.region],
-                    }}
-                  >
-                    <span className="bbox-label">
-                      {activeVert.label}
-                      <span className="bbox-conf">
-                        {(activeVert.confidence * 100).toFixed(0)}%
+            {/* Bounding-box overlays. Multi-select: dibujamos UN bbox por
+                cada vértebra seleccionada con su color de región. El hover
+                añade un overlay con styling reforzado (clase .hovered).
+                Las coords vienen en píxeles del espacio original tras
+                reverse-letterbox; el comparator preserva aspect ratio, así
+                que porcentajes bastan. */}
+            {activeBoxes.length > 0 && (
+              <div className="bbox-layer">
+                {activeBoxes.map(({ vert, isHovered }) => {
+                  const bb = vert.bounding_box;
+                  const W = mask.dimensions.width;
+                  const H = mask.dimensions.height;
+                  const leftPct = (bb.x_min / W) * 100;
+                  const topPct = (bb.y_min / H) * 100;
+                  const widthPct = ((bb.x_max - bb.x_min) / W) * 100;
+                  const heightPct = ((bb.y_max - bb.y_min) / H) * 100;
+                  // Si el bbox queda cerca del borde derecho de la imagen,
+                  // la etiqueta (que va a la derecha por defecto) se saldría
+                  // del frame. Flippeamos a la izquierda en ese caso.
+                  const rightPct = leftPct + widthPct;
+                  const labelOnLeft = rightPct > 88;
+                  return (
+                    <div
+                      key={vert.id}
+                      className={[
+                        'bbox-overlay',
+                        labelOnLeft ? 'tag-left' : '',
+                        isHovered ? 'hovered' : '',
+                      ].filter(Boolean).join(' ')}
+                      style={{
+                        left: `${leftPct}%`,
+                        top: `${topPct}%`,
+                        width: `${widthPct}%`,
+                        height: `${heightPct}%`,
+                        '--bbox-color': regionColors[vert.region],
+                      }}
+                    >
+                      <span className="bbox-label">
+                        {vert.label}
+                        <span className="bbox-conf">
+                          {(vert.confidence * 100).toFixed(0)}%
+                        </span>
                       </span>
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* HUD esquinas — solo datos REALES del backend */}
@@ -592,11 +652,27 @@ function ResultView({ result, fileUrl, filename, onNew }) {
           </section>
 
           <section className="panel-card">
-            <header><h3>Vértebras</h3></header>
+            <header className="vert-panel-header">
+              <h3>Vértebras</h3>
+              <div className="vert-selection-meta">
+                <span className="vert-selection-count">
+                  {selectedIds.size}/{selectableCount} seleccionadas
+                </span>
+                <button
+                  type="button"
+                  className="vert-clear-btn"
+                  onClick={clearSelection}
+                  disabled={selectedIds.size === 0}
+                  title="Quitar todas las vértebras seleccionadas"
+                >
+                  Limpiar
+                </button>
+              </div>
+            </header>
             <div className="vert-grid">
               {vertebrae.map((v) => {
                 const isHovered = hoveredId === v.id;
-                const isSelected = selectedId === v.id;
+                const isSelected = selectedIds.has(v.id);
                 return (
                   <button
                     key={v.id}
@@ -612,7 +688,7 @@ function ResultView({ result, fileUrl, filename, onNew }) {
                     onClick={() => v.detected && v.bounding_box && toggleSelected(v.id)}
                     disabled={!v.detected || !v.bounding_box}
                     title={v.detected
-                      ? `${v.label} · ${(v.confidence * 100).toFixed(1)}% · ${v.pixel_count} px${v.bounding_box ? ' · click para fijar' : ''}`
+                      ? `${v.label} · ${(v.confidence * 100).toFixed(1)}% · ${v.pixel_count} px${v.bounding_box ? (isSelected ? ' · click para quitar' : ' · click para añadir') : ''}`
                       : `${v.label} · no detectada`
                     }
                   >{v.label}</button>
@@ -660,6 +736,8 @@ function App() {
   const [result, setResult] = useState(null);       // Respuesta del backend
   const [error, setError] = useState(null);
   const [modelVersion, setModelVersion] = useState(null);
+  const [models, setModels] = useState([]);
+  const [selectedModelId, setSelectedModelId] = useState('medsam');
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULS);
 
   useEffect(() => {
@@ -674,6 +752,22 @@ function App() {
       .catch(() => {/* silencioso: el AppBar mostrará "Conectando…" */});
   }, []);
 
+  // Catálogo de modelos para las tarjetas seleccionables de la pantalla de upload.
+  // Si el backend no expone 'medsam' caemos al primer modelo del catálogo.
+  useEffect(() => {
+    fetch(`${API_BASE}/models`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.items) return;
+        setModels(data.items);
+        const hasMedsam = data.items.some((m) => m.id === 'medsam');
+        if (!hasMedsam && data.items.length > 0) {
+          setSelectedModelId(data.items[0].id);
+        }
+      })
+      .catch(() => {/* silencioso: UploadZone mostrará "Cargando modelos…" */});
+  }, []);
+
   const start = async (file) => {
     setFilename(file.name);
     const localUrl = URL.createObjectURL(file);
@@ -684,7 +778,7 @@ function App() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('model', 'medsam');
+      formData.append('model', selectedModelId);
 
       const response = await fetch(`${API_BASE}/xrays`, {
         method: 'POST',
@@ -729,7 +823,14 @@ function App() {
       />
 
       <main className="main">
-        {phase === 'upload' && <UploadZone onUpload={start} />}
+        {phase === 'upload' && (
+          <UploadZone
+            onUpload={start}
+            models={models}
+            selectedModelId={selectedModelId}
+            onSelectModel={setSelectedModelId}
+          />
+        )}
         {phase === 'processing' && <ProcessingScreen filename={filename} fileUrl={fileUrl} />}
         {phase === 'error' && <ErrorScreen error={error} onRetry={reset} />}
         {phase === 'result' && result && (

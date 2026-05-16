@@ -11,6 +11,9 @@ transformers>=4.40.0
 torch>=2.1.0
 torchvision>=0.16.0
 segment-anything>=1.0
+# Requerido para deserializar el checkpoint del Experimento B (UNet binario),
+# que MLflow guardó con `mlflow.pytorch.log_model` usando cloudpickle.
+cloudpickle>=3.0.0
 
 # --- Imagen ---
 Pillow>=10.3.0

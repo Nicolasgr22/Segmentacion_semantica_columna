@@ -9,6 +9,9 @@ from app.core.domain.ports.model_registry_port import ModelRegistryPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase
 from app.core.use_cases.export_result import ExportResultUseCase
+from app.infrastructure.adapters.model.progressive_unet_adapter import (
+    ProgressiveUNetBinaryAdapter,
+)
 from app.infrastructure.adapters.model.vertebraprompt_boxrefiner_adapter import (
     VertebraPromptBoxRefinerAdapter,
 )
@@ -27,6 +30,13 @@ def get_model_adapter() -> VertebraPromptBoxRefinerAdapter:
         sam_base_checkpoint=settings.medsam_sam_checkpoint,
         medsam_finetuned_checkpoint=settings.medsam_finetuned_checkpoint,
     )
+    return adapter
+
+
+@lru_cache(maxsize=1)
+def get_progressive_unet_adapter() -> ProgressiveUNetBinaryAdapter:
+    adapter = ProgressiveUNetBinaryAdapter(device=settings.model_device)
+    adapter.load_model(checkpoint=settings.progressive_unet_checkpoint)
     return adapter
 
 
@@ -52,6 +62,7 @@ def get_model_registry_port(
 
 def get_model_dispatch(
     medsam: ModelPort = Depends(get_model_adapter),
+    progressive_unet: ModelPort = Depends(get_progressive_unet_adapter),
 ) -> dict[ModelName, ModelPort]:
     """Mapea cada ModelName al adapter cargado.
 
@@ -60,7 +71,10 @@ def get_model_dispatch(
       1. Registrar su ModelCard en InMemoryModelRegistry.
       2. Cargar su adapter aquí y mapearlo en este dict.
     """
-    return {ModelName.MEDSAM: medsam}
+    return {
+        ModelName.MEDSAM: medsam,
+        ModelName.PROGRESSIVE_UNET_BINARY: progressive_unet,
+    }
 
 
 def get_analyze_use_case(
