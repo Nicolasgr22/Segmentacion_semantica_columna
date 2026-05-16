@@ -1415,3 +1415,216 @@ body::after {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   COMPARE SCREEN — dos paneles lado a lado con overlay de máscara.
+   Toda la pantalla cabe en el viewport (sin scroll): la imagen se
+   reduce vía object-fit:contain hasta entrar en el alto disponible.
+   ════════════════════════════════════════════════════════════════ */
+.compare-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Ocupa todo el alto disponible dentro de .main (que tiene padding 32px). */
+  height: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 0;
+}
+.compare-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 4px;
+  flex-shrink: 0;
+}
+.compare-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--on-surf-var);
+  font-size: 13px;
+}
+.compare-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  /* Toma el alto restante después de la toolbar. min-height: 0 permite
+     que los hijos puedan encogerse (default sería content-based). */
+  flex: 1;
+  min-height: 0;
+}
+
+.compare-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surf-1);
+  border: 1px solid var(--outline-soft);
+  border-radius: 16px;
+  padding: 16px;
+  min-height: 0;        /* permite que el canvas hijo encoja */
+  overflow: hidden;     /* defensa por si alguna imagen muy ancha desborda */
+}
+.compare-pane-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.compare-pane-title h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--primary);
+}
+.compare-pane-title .mono {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  color: var(--on-surf-dim);
+}
+.compare-canvas {
+  position: relative;
+  width: 100%;
+  /* Toma todo el espacio vertical sobrante dentro del pane. */
+  flex: 1;
+  min-height: 0;
+  background: var(--surf-0);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.compare-xray,
+.compare-mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.compare-mask {
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+/* Estado vacío del panel derecho: caja con + grande, clickeable. */
+.compare-empty {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  /* Toma el mismo alto que el ComparePane gemelo de la izquierda
+     (grid 1fr 1fr + min-height: 0 hace que estiren a iguales). */
+  min-height: 0;
+  background: var(--surf-1);
+  border: 2px dashed var(--outline);
+  border-radius: 16px;
+  color: var(--on-surf-dim);
+  text-align: center;
+  transition: border-color 200ms ease,
+              color 200ms ease,
+              background 200ms ease,
+              transform 200ms ease;
+}
+.compare-empty:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
+  transform: translateY(-2px);
+}
+.compare-empty:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.compare-empty:disabled { cursor: not-allowed; opacity: 0.45; }
+.compare-empty-plus {
+  font-size: 96px;
+  font-weight: 200;
+  line-height: 1;
+  color: inherit;
+}
+.compare-empty-label {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+/* Estados loading/error reusan el chrome de .compare-pane. Sin min-height
+   forzado — el grid 1fr 1fr ya equipara el alto al del pane gemelo. */
+.compare-status {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+}
+.compare-status p {
+  margin: 0;
+  color: var(--on-surf-var);
+  font-size: 13px;
+}
+.compare-status-error {
+  color: var(--error);
+}
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--outline-soft);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════════════════════════════════════
+   MODAL (selector de modelo para comparación)
+   ════════════════════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+.modal-card {
+  background: var(--surf-1);
+  border: 1px solid var(--outline-soft);
+  border-radius: 20px;
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--on-surf);
+}
+.modal-empty {
+  color: var(--on-surf-dim);
+  text-align: center;
+  padding: 32px 0;
+}
+.modal-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Responsive: en pantallas chicas apilar los paneles. */
+@media (max-width: 1100px) {
+  .compare-body { grid-template-columns: 1fr; }
+}

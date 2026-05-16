@@ -320,7 +320,7 @@ function ErrorScreen({ error, onRetry }) {
 }
 
 // ───────────────────────── Vista de resultados ─────────────────────────
-function ResultView({ result, fileUrl, filename, onNew }) {
+function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [hoveredId, setHoveredId] = useState(null);
   // Multi-select de vértebras: Set para que React detecte cambios al hacer
@@ -456,6 +456,9 @@ function ResultView({ result, fileUrl, filename, onNew }) {
               <Icon name="fit" size={18} />
             </button>
           </div>
+          <button className="btn-tonal" onClick={onCompare} title="Comparar con otro modelo">
+            <Icon name="layers" size={18} /> Comparar
+          </button>
           <button className="btn-filled" onClick={() => downloadExport('overlay')} title="Descargar overlay">
             <Icon name="download" size={18} /> Exportar
           </button>
@@ -724,20 +727,170 @@ function ResultView({ result, fileUrl, filename, onNew }) {
   );
 }
 
+// ───────────────────────── Comparación: panel reutilizable ─────────────────────────
+// Render compacto de un análisis: título (display_name del modelo), métricas
+// resumidas y la radiografía con su máscara superpuesta (overlay fijo).
+function ComparePane({ title, metrics, fileUrl, maskBase64 }) {
+  const maskUrl = `data:image/png;base64,${maskBase64}`;
+  return (
+    <div className="compare-pane">
+      <div className="compare-pane-title">
+        <h3>{title}</h3>
+        <span className="mono">
+          Dice {metrics.dice.toFixed(3)} · IoU {metrics.iou.toFixed(3)} · {metrics.latency_ms.toFixed(0)} ms
+        </span>
+      </div>
+      {/* El canvas toma el alto disponible vía flex; las imágenes usan
+          object-fit: contain para que la radiografía completa se vea
+          dentro del viewport sin scroll, preservando aspect ratio. */}
+      <div className="compare-canvas">
+        <img className="compare-xray" src={fileUrl} alt="Radiografía original" />
+        <img className="compare-mask" src={maskUrl} alt="Máscara del modelo" />
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── Modal selector de modelo (comparación) ─────────────────────────
+// Lista las opciones disponibles (ya filtradas) reusando ModelCard. ESC cierra.
+function ModelPickerModal({ models, onPick, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <header className="modal-header">
+          <h2>Comparar contra…</h2>
+          <button className="icon-btn" onClick={onClose} title="Cerrar (Esc)">
+            <Icon name="close" size={20} />
+          </button>
+        </header>
+        {models.length === 0 ? (
+          <p className="modal-empty">No hay otros modelos disponibles para comparar.</p>
+        ) : (
+          <div className="modal-model-list">
+            {models.map((m) => (
+              <ModelCard key={m.id} model={m} selected={false} onClick={() => onPick(m.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── Pantalla 3: comparación de modelos ─────────────────────────
+function CompareView({
+  result,
+  fileUrl,
+  filename,
+  models,
+  selectedModelId,
+  compareModelId,
+  compareResult,
+  compareLoading,
+  compareError,
+  onPickCompare,
+  onBack,
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const availableModels = models.filter((m) => m.id !== selectedModelId);
+  const primaryModel = models.find((m) => m.id === selectedModelId);
+  const compareModel = compareModelId ? models.find((m) => m.id === compareModelId) : null;
+
+  return (
+    <div className="compare-shell">
+      <div className="compare-toolbar">
+        <button className="btn-tonal" onClick={onBack}>
+          <Icon name="refresh" size={16} /> Volver al resultado
+        </button>
+        <div className="compare-file">
+          <Icon name="image" size={16} />
+          <span className="mono">{filename}</span>
+        </div>
+      </div>
+
+      <div className="compare-body">
+        <ComparePane
+          title={primaryModel?.display_name || 'Modelo A'}
+          metrics={result.metrics.model_metrics}
+          fileUrl={fileUrl}
+          maskBase64={result.mask.data}
+        />
+
+        {!compareModelId ? (
+          <button
+            type="button"
+            className="compare-empty"
+            onClick={() => setPickerOpen(true)}
+            disabled={availableModels.length === 0}
+            title={availableModels.length === 0
+              ? 'No hay otros modelos publicados'
+              : 'Elegir modelo para comparar'}
+          >
+            <span className="compare-empty-plus">+</span>
+            <span className="compare-empty-label">Comparar con otro modelo</span>
+          </button>
+        ) : compareLoading ? (
+          <div className="compare-pane compare-status">
+            <div className="spinner" />
+            <p>Ejecutando {compareModel?.display_name || 'modelo'}…</p>
+          </div>
+        ) : compareError ? (
+          <div className="compare-pane compare-status compare-status-error">
+            <Icon name="error" size={32} />
+            <p>{compareError}</p>
+            <button className="btn-tonal" onClick={() => setPickerOpen(true)}>
+              Reintentar con otro modelo
+            </button>
+          </div>
+        ) : compareResult ? (
+          <ComparePane
+            title={compareModel?.display_name || 'Modelo B'}
+            metrics={compareResult.metrics.model_metrics}
+            fileUrl={fileUrl}
+            maskBase64={compareResult.mask.data}
+          />
+        ) : null}
+      </div>
+
+      {pickerOpen && (
+        <ModelPickerModal
+          models={availableModels}
+          onPick={(id) => { setPickerOpen(false); onPickCompare(id); }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ───────────────────────── App raíz ─────────────────────────
 const TWEAK_DEFAULS = /*EDITMODE-BEGIN*/{
   "theme": "dark"
 }/*EDITMODE-END*/;
 
 function App() {
-  const [phase, setPhase] = useState('upload');     // upload | processing | result | error
+  const [phase, setPhase] = useState('upload');     // upload | processing | result | error | compare
   const [filename, setFilename] = useState('');
   const [fileUrl, setFileUrl] = useState(null);     // URL local de la imagen subida
+  // Guardamos también el File blob original para poder re-submitirlo a /xrays
+  // cuando el usuario quiera correr la comparación con otro modelo.
+  const [originalFile, setOriginalFile] = useState(null);
   const [result, setResult] = useState(null);       // Respuesta del backend
   const [error, setError] = useState(null);
   const [modelVersion, setModelVersion] = useState(null);
   const [models, setModels] = useState([]);
   const [selectedModelId, setSelectedModelId] = useState('medsam');
+  // Estado de comparación contra un segundo modelo (pantalla 3).
+  const [compareModelId, setCompareModelId] = useState(null);
+  const [compareResult, setCompareResult] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState(null);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULS);
 
   useEffect(() => {
@@ -770,6 +923,7 @@ function App() {
 
   const start = async (file) => {
     setFilename(file.name);
+    setOriginalFile(file);
     const localUrl = URL.createObjectURL(file);
     setFileUrl(localUrl);
     setPhase('processing');
@@ -809,9 +963,54 @@ function App() {
     setPhase('upload');
     setFilename('');
     setFileUrl(null);
+    setOriginalFile(null);
     setResult(null);
     setError(null);
+    setCompareModelId(null);
+    setCompareResult(null);
+    setCompareError(null);
+    setCompareLoading(false);
   };
+
+  // Comparación con un segundo modelo: re-submit del MISMO file al endpoint
+  // /xrays con otro `model`. Vive como estado independiente para no pisar el
+  // resultado del primer análisis (que sigue visible en la pantalla 3).
+  const runComparison = async (modelId) => {
+    if (!originalFile) return;
+    setCompareModelId(modelId);
+    setCompareLoading(true);
+    setCompareError(null);
+    setCompareResult(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', originalFile);
+      formData.append('model', modelId);
+      const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const errBody = await response.json();
+          message = errBody.detail || errBody.error || message;
+        } catch {/* sin cuerpo JSON */}
+        throw new Error(message);
+      }
+      setCompareResult(await response.json());
+    } catch (err) {
+      console.error('Error en comparación:', err);
+      setCompareError(err.message || 'No se pudo ejecutar la comparación');
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
+  const enterCompare = () => {
+    setCompareResult(null);
+    setCompareModelId(null);
+    setCompareError(null);
+    setCompareLoading(false);
+    setPhase('compare');
+  };
+  const exitCompare = () => setPhase('result');
 
   return (
     <div className="app">
@@ -834,7 +1033,28 @@ function App() {
         {phase === 'processing' && <ProcessingScreen filename={filename} fileUrl={fileUrl} />}
         {phase === 'error' && <ErrorScreen error={error} onRetry={reset} />}
         {phase === 'result' && result && (
-          <ResultView result={result} fileUrl={fileUrl} filename={filename} onNew={reset} />
+          <ResultView
+            result={result}
+            fileUrl={fileUrl}
+            filename={filename}
+            onNew={reset}
+            onCompare={enterCompare}
+          />
+        )}
+        {phase === 'compare' && result && (
+          <CompareView
+            result={result}
+            fileUrl={fileUrl}
+            filename={filename}
+            models={models}
+            selectedModelId={selectedModelId}
+            compareModelId={compareModelId}
+            compareResult={compareResult}
+            compareLoading={compareLoading}
+            compareError={compareError}
+            onPickCompare={runComparison}
+            onBack={exitCompare}
+          />
         )}
       </main>
 
