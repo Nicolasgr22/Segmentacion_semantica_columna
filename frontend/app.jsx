@@ -42,7 +42,7 @@ const Icon = ({ name, size = 24, ...props }) => {
 };
 
 // ───────────────────────── App Bar ─────────────────────────
-function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze, onPickModel }) {
+function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze, onPickModel, phase }) {
   return (
     <header className="appbar">
       <div className="appbar-left">
@@ -65,16 +65,18 @@ function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze
       </div>
 
       <div className="appbar-right">
-        <button
-          type="button"
-          className="status-pill appbar-model-btn"
-          onClick={canReanalyze ? onPickModel : undefined}
-          disabled={!canReanalyze}
-          title={canReanalyze ? "Cambiar modelo y re-analizar" : "Modelo conectado"}
-        >
-          <span className="status-dot" />
-          {canReanalyze && selectedModelName ? selectedModelName : (selectedModelName ? 'Modelo conectado' : 'Conectando…')}
-        </button>
+        {phase !== 'compare' && (
+          <button
+            type="button"
+            className="status-pill appbar-model-btn"
+            onClick={canReanalyze ? onPickModel : undefined}
+            disabled={!canReanalyze}
+            title={canReanalyze ? "Cambiar modelo y re-analizar" : "Modelo conectado"}
+          >
+            <span className="status-dot" />
+            {canReanalyze && selectedModelName ? selectedModelName : (selectedModelName ? 'Modelo conectado' : 'Conectando…')}
+          </button>
+        )}
         <button className="icon-btn" onClick={onToggleTheme} title="Cambiar tema">
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
         </button>
@@ -758,7 +760,18 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
 // global" de la pantalla de resultados) + radiografía con máscara superpuesta.
 // Los slots no primarios reciben `onChange` para abrir el picker que reemplaza
 // el modelo del slot.
-function ComparePane({ title, metrics, fileUrl, maskBase64, primary, onChange, onError, error }) {
+const COMPARE_REGION_COLORS = {
+  cervical: '#4285F4',
+  thoracic: '#34A853',
+  lumbar:   '#EA4335',
+};
+const COMPARE_REGION_INFO = [
+  { key: 'cervical', label: 'Cervical', range: 'C3–C7' },
+  { key: 'thoracic', label: 'Torácica', range: 'T1–T12' },
+  { key: 'lumbar',   label: 'Lumbar',   range: 'L1–L5' },
+];
+
+function ComparePane({ title, metrics, fileUrl, maskBase64, primary, onChange, onError, error, fullResult, showDetail }) {
   if (error) {
     return (
       <div className="compare-pane compare-status compare-status-error">
@@ -774,7 +787,7 @@ function ComparePane({ title, metrics, fileUrl, maskBase64, primary, onChange, o
   }
   const maskUrl = `data:image/png;base64,${maskBase64}`;
   return (
-    <div className="compare-pane">
+    <div className={`compare-pane${showDetail ? ' compare-pane--detail' : ''}`}>
       <div className="compare-pane-header">
         <h3>{title}</h3>
         {!primary && onChange && (
@@ -790,36 +803,93 @@ function ComparePane({ title, metrics, fileUrl, maskBase64, primary, onChange, o
           </button>
         )}
       </div>
-      <div className="compare-metrics">
-        <div className="metric-row">
-          <div className="conf-row">
+
+      {/* En modo normal las métricas van arriba; en detalle desaparecen (se muestran abajo) */}
+      {!showDetail && (
+        <div className="compare-metrics">
+          <div className="metric-row">
+            <div className="conf-row">
+              <span>Dice</span>
+              <b className="mono">{metrics.dice.toFixed(3)}</b>
+            </div>
+            <div className="conf-bar">
+              <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.dice)) * 100}%` }} />
+            </div>
+          </div>
+          <div className="metric-row">
+            <div className="conf-row">
+              <span>IoU</span>
+              <b className="mono">{metrics.iou.toFixed(3)}</b>
+            </div>
+            <div className="conf-bar">
+              <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.iou)) * 100}%` }} />
+            </div>
+          </div>
+          <div className="metric-row metric-row-latency">
+            <div className="conf-row">
+              <span><Icon name="clock" size={12} /> Tiempo de ejecución</span>
+              <b className="mono">{metrics.latency_ms.toFixed(0)} ms</b>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`compare-canvas${showDetail ? ' compare-canvas--compact' : ''}`}>
+        <img className="compare-xray" src={fileUrl} alt="Radiografía original" />
+        <img className="compare-mask" src={maskUrl} alt="Máscara del modelo" />
+      </div>
+
+      {showDetail && fullResult && (
+        <div className="compare-detail">
+          <div className="compare-detail-section">Resultados</div>
+          <div className="compare-detail-row">
+            <span>Vértebras detectadas</span>
+            <b className="mono">{fullResult.metrics.detected_count}/{fullResult.vertebrae?.length ?? '?'}</b>
+          </div>
+          <div className="compare-detail-row">
+            <span>Confianza global</span>
+            <b className="mono">{(fullResult.metrics.confidence * 100).toFixed(1)}%</b>
+          </div>
+          <div className="compare-detail-divider" />
+          <div className="compare-detail-section">Por región</div>
+          {COMPARE_REGION_INFO.map((r) => {
+            const data = fullResult.metrics.by_region?.[r.key];
+            if (!data) return null;
+            return (
+              <div key={r.key} className="compare-detail-region">
+                <span className="compare-detail-region-name">
+                  <span className="compare-detail-dot" style={{ background: COMPARE_REGION_COLORS[r.key] }} />
+                  {r.label} <span className="compare-detail-range">{r.range}</span>
+                </span>
+                <span className="mono">
+                  {data.detected_count}/{data.expected_count}
+                  <span className="compare-detail-conf"> · {(data.mean_confidence * 100).toFixed(1)}%</span>
+                </span>
+              </div>
+            );
+          })}
+          <div className="compare-detail-divider" />
+          <div className="compare-detail-section">Métricas del modelo</div>
+          <div className="compare-detail-row">
             <span>Dice</span>
             <b className="mono">{metrics.dice.toFixed(3)}</b>
           </div>
-          <div className="conf-bar">
-            <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.dice)) * 100}%` }} />
+          <div className="compare-detail-bar">
+            <div className="compare-detail-bar-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.dice)) * 100}%` }} />
           </div>
-        </div>
-        <div className="metric-row">
-          <div className="conf-row">
+          <div className="compare-detail-row">
             <span>IoU</span>
             <b className="mono">{metrics.iou.toFixed(3)}</b>
           </div>
-          <div className="conf-bar">
-            <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.iou)) * 100}%` }} />
+          <div className="compare-detail-bar">
+            <div className="compare-detail-bar-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.iou)) * 100}%` }} />
           </div>
-        </div>
-        <div className="metric-row metric-row-latency">
-          <div className="conf-row">
+          <div className="compare-detail-row">
             <span><Icon name="clock" size={12} /> Tiempo de ejecución</span>
             <b className="mono">{metrics.latency_ms.toFixed(0)} ms</b>
           </div>
         </div>
-      </div>
-      <div className="compare-canvas">
-        <img className="compare-xray" src={fileUrl} alt="Radiografía original" />
-        <img className="compare-mask" src={maskUrl} alt="Máscara del modelo" />
-      </div>
+      )}
     </div>
   );
 }
@@ -873,6 +943,7 @@ function CompareView({
 }) {
   // pickerState: null | { mode: 'add' } | { mode: 'change', slotIdx }
   const [pickerState, setPickerState] = useState(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const primaryModel = models.find((m) => m.id === selectedModelId);
   const usedIds = new Set([selectedModelId, ...compareSlots.map((s) => s.modelId)]);
@@ -892,9 +963,18 @@ function CompareView({
   return (
     <div className="compare-shell">
       <div className="compare-toolbar">
-        <button className="btn-tonal" onClick={onBack}>
-          <Icon name="refresh" size={16} /> Volver al resultado
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-tonal" onClick={onBack}>
+            <Icon name="refresh" size={16} /> Volver al resultado
+          </button>
+          <button
+            className={`btn-tonal${showDetail ? ' btn-tonal--active' : ''}`}
+            onClick={() => setShowDetail((v) => !v)}
+            title={showDetail ? 'Ocultar métricas detalladas' : 'Ver métricas detalladas por modelo'}
+          >
+            <Icon name="info" size={16} /> {showDetail ? 'Ocultar detalle' : 'Ver detalle'}
+          </button>
+        </div>
         <div className="compare-file">
           <Icon name="image" size={16} />
           <span className="mono">{filename}</span>
@@ -911,6 +991,8 @@ function CompareView({
           metrics={result.metrics.model_metrics}
           fileUrl={fileUrl}
           maskBase64={result.mask.data}
+          fullResult={result}
+          showDetail={showDetail}
         />
 
         {compareSlots.map((slot, idx) => {
@@ -944,6 +1026,8 @@ function CompareView({
               fileUrl={fileUrl}
               maskBase64={slot.result.mask.data}
               onChange={openChange}
+              fullResult={slot.result}
+              showDetail={showDetail}
             />
           );
         })}
@@ -1150,6 +1234,7 @@ function App() {
         selectedModelName={selectedModelName}
         canReanalyze={canReanalyze}
         onPickModel={() => setPickerOpen(true)}
+        phase={phase}
       />
 
       <main className="main">

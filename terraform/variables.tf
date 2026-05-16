@@ -43,9 +43,9 @@ variable "project_name" {
 # ── Servicio EC2 Spot ────────────────────────────────────────────────────────
 
 variable "instance_type" {
-  description = "Tipo de EC2 para el servicio. t3.medium = 4GB / 2vCPU (mínimo viable para SAM ViT-B en CPU). t3.large si el primer arranque OOM."
+  description = "Tipo de EC2 para el servicio. t3.large = 8GB / 2vCPU — necesario al cargar 3 adapters en RAM (medsam + progressive-unet + unet++ efficientnet-b7). t3.medium causaba OOM al inicio."
   type        = string
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "host_port" {

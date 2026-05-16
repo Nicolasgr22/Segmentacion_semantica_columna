@@ -1615,6 +1615,96 @@ body::after {
   pointer-events: none;
 }
 
+/* Modo detalle: el pane se vuelve scrollable y el canvas se encoge */
+.compare-pane--detail {
+  overflow-y: auto;
+}
+.compare-canvas--compact {
+  flex: none;
+  height: 220px;
+  min-height: 120px;
+}
+
+/* Sección de detalle (debajo de la imagen en modo Ver detalle) */
+.compare-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+.compare-detail-section {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--on-surf-var);
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+.compare-detail-divider {
+  height: 1px;
+  background: var(--outline-soft);
+  margin: 4px 0;
+}
+.compare-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  gap: 8px;
+}
+.compare-detail-row span { color: var(--on-surf-dim); display: inline-flex; align-items: center; gap: 4px; }
+.compare-detail-row b { font-variant-numeric: tabular-nums; }
+.compare-detail-bar {
+  height: 3px;
+  background: var(--outline-soft);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+.compare-detail-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: width 400ms ease;
+}
+.compare-detail-region {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  gap: 8px;
+}
+.compare-detail-region-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  color: var(--on-surf);
+}
+.compare-detail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.compare-detail-range {
+  font-weight: 400;
+  color: var(--on-surf-dim);
+  font-size: 10px;
+}
+.compare-detail-conf {
+  color: var(--on-surf-dim);
+}
+
+/* Variante activa del btn-tonal (Ver detalle activado) */
+.btn-tonal--active {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-color: var(--primary);
+}
+
 /* Estado vacío del panel derecho: caja con + grande, clickeable. */
 .compare-empty {
   all: unset;

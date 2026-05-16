@@ -36,7 +36,7 @@ if docker pull "${ecr_image}:latest"; then
   # - --cap-drop=ALL      : sin capabilities de Linux. La app no necesita ninguna.
   # - --security-opt no-new-privileges : evita escalada via setuid.
   # - --pids-limit        : limita fork bombs.
-  # - --memory / --cpus   : t3.medium tiene 4G/2vCPU; dejamos margen al host.
+  # - --memory / --cpus   : t3.large tiene 8G/2vCPU; dejamos ~1GB de margen al host.
   # - --user 1000:1000    : redundancia (Dockerfile ya hace USER vertebra).
   docker run -d \
     --name vertebra-svc \
@@ -46,8 +46,8 @@ if docker pull "${ecr_image}:latest"; then
     --cap-drop=ALL \
     --security-opt no-new-privileges \
     --pids-limit 256 \
-    --memory=3500m \
-    --memory-swap=3500m \
+    --memory=7000m \
+    --memory-swap=7000m \
     --cpus=1.8 \
     --user 1000:1000 \
     -p ${host_port}:8000 \
