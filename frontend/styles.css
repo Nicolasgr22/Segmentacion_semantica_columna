@@ -832,10 +832,62 @@ body::after {
   text-align: center;
 }
 
+/* ───── Dropdown de acciones (toolbar de resultados) ───── */
+.actions-menu { position: relative; }
+.actions-menu .btn-filled .caret {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.actions-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--surf-1);
+  border: 1px solid var(--outline-soft);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+.actions-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-surf-dim);
+  padding: 6px 10px 4px;
+}
+.actions-dropdown button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--on-surf);
+  text-align: left;
+  justify-content: flex-start;
+  background: transparent;
+  border: none;
+  transition: 120ms;
+}
+.actions-dropdown button:hover { background: var(--surf-2); }
+.actions-divider {
+  height: 1px;
+  background: var(--outline-soft);
+  margin: 6px 4px;
+}
+
 /* ───── Stage central + side panel ───── */
 .result-body {
   display: grid;
   grid-template-columns: 1fr 360px;
+  grid-template-rows: 1fr;     /* Fila estirada al alto disponible (si no, el stage colapsa). */
   gap: 16px;
   flex: 1;
   min-height: 0;
@@ -843,7 +895,7 @@ body::after {
 
 .stage {
   position: relative;
-  min-height: 640px;
+  min-height: 0;
   background:
     radial-gradient(ellipse 60% 50% at 50% 50%, rgba(79, 195, 247, 0.04), transparent 70%),
     var(--surf-0);
@@ -892,8 +944,10 @@ body::after {
   position: absolute;
   top: 50%;
   left: 50%;
-  height: 90%;
-  /* aspect-ratio se aplica inline en JSX según las dimensiones reales de la máscara */
+  /* Fit-to-stage: height empuja el aspect-ratio inline, max-width recorta si
+     la radiografía es muy ancha — equivale a object-fit: contain. */
+  height: 94%;
+  max-width: 94%;
   transform-origin: center;
   transform: translate(-50%, -50%);
   border: 1px solid var(--outline);
@@ -1075,21 +1129,35 @@ body::after {
 .side-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
+  gap: 10px;
   padding-right: 4px;
+  min-height: 0;
+  overflow: hidden;
+}
+.side-panel > .panel-card { flex: 0 0 auto; }
+/* La tarjeta Vértebras (última) absorbe el espacio sobrante para que todas
+   las chips queden visibles sin scroll. */
+.side-panel > .panel-card:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.side-panel > .panel-card:last-child .vert-grid {
+  flex: 1 1 auto;
+  align-content: start;
 }
 .panel-card {
   background: var(--surf-1);
   border: 1px solid var(--outline-soft);
   border-radius: 16px;
-  padding: 16px;
+  padding: 10px 12px;
 }
 .panel-card header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .panel-card h3 {
   margin: 0;
@@ -1104,35 +1172,35 @@ body::after {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .big-stat-value {
   font-family: 'Roboto Mono', monospace;
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 300;
   letter-spacing: -0.02em;
   color: var(--primary);
   line-height: 1;
-  text-shadow: 0 0 24px color-mix(in oklab, var(--primary) 40%, transparent);
+  text-shadow: 0 0 16px color-mix(in oklab, var(--primary) 40%, transparent);
 }
 .big-stat-value span {
-  font-size: 22px;
+  font-size: 16px;
   color: var(--on-surf-dim);
   margin-left: 4px;
 }
 .big-stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--on-surf-var);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
-.confidence { padding-top: 12px; border-top: 1px solid var(--outline-soft); }
+.confidence { padding-top: 8px; border-top: 1px solid var(--outline-soft); }
 .conf-row {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--on-surf-var);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .conf-row b { color: var(--tertiary); font-size: 14px; }
 .conf-bar {
@@ -1159,10 +1227,10 @@ body::after {
 .region-list li {
   display: grid;
   grid-template-columns: 12px 1fr auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 10px 8px;
-  border-radius: 10px;
+  padding: 5px 6px;
+  border-radius: 8px;
   transition: 160ms;
 }
 .region-list li:hover { background: var(--surf-2); }
@@ -1192,13 +1260,13 @@ body::after {
 .vert-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 3px;
 }
 .vert-chip {
-  padding: 6px 4px;
-  border-radius: 8px;
+  padding: 4px 2px;
+  border-radius: 6px;
   font-family: 'Roboto Mono', monospace;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
   background: var(--surf-2);
   color: var(--on-surf-var);
@@ -1449,8 +1517,9 @@ body::after {
 }
 .compare-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  /* grid-template-columns se aplica inline en JSX según paneCount
+     (repeat(N, minmax(0, 1fr))). minmax(0, 1fr) evita blow-out. */
+  gap: 12px;
   /* Toma el alto restante después de la toolbar. min-height: 0 permite
      que los hijos puedan encogerse (default sería content-based). */
   flex: 1;
@@ -1460,29 +1529,66 @@ body::after {
 .compare-pane {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   background: var(--surf-1);
   border: 1px solid var(--outline-soft);
   border-radius: 16px;
-  padding: 16px;
+  padding: 12px;
   min-height: 0;        /* permite que el canvas hijo encoja */
+  min-width: 0;         /* clave con grid minmax(0, 1fr) para que no se ensanche */
   overflow: hidden;     /* defensa por si alguna imagen muy ancha desborda */
 }
-.compare-pane-title {
+.compare-pane-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   flex-shrink: 0;
 }
-.compare-pane-title h3 {
+.compare-pane-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--primary);
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.compare-pane-title .mono {
-  font-family: 'Roboto Mono', monospace;
+.compare-change-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
   font-size: 11px;
-  color: var(--on-surf-dim);
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: 160ms;
+  cursor: pointer;
+}
+.compare-change-btn:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.compare-change-btn .caret { font-size: 9px; opacity: 0.85; }
+.compare-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.compare-metrics .metric-row { display: flex; flex-direction: column; gap: 3px; }
+.compare-metrics .conf-row { font-size: 11px; margin-bottom: 0; }
+/* La fila de tiempo de ejecución usa el mismo conf-row pero sin barra. El
+   icono del reloj se alinea con el label vía inline-flex. */
+.compare-metrics .metric-row-latency .conf-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .compare-canvas {
   position: relative;
@@ -1543,14 +1649,16 @@ body::after {
 }
 .compare-empty:disabled { cursor: not-allowed; opacity: 0.45; }
 .compare-empty-plus {
-  font-size: 96px;
+  font-size: 64px;
   font-weight: 200;
   line-height: 1;
   color: inherit;
 }
 .compare-empty-label {
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.04em;
+  padding: 0 8px;
+  text-align: center;
 }
 
 /* Estados loading/error reusan el chrome de .compare-pane. Sin min-height
@@ -1624,7 +1732,57 @@ body::after {
   gap: 12px;
 }
 
-/* Responsive: en pantallas chicas apilar los paneles. */
+/* Responsive: en pantallas chicas apilar los paneles. El inline-style desde
+   JSX define el grid normal (repeat(N, minmax(0, 1fr))); aquí se sobreescribe
+   con !important para forzar el stack cuando no hay ancho. */
 @media (max-width: 1100px) {
-  .compare-body { grid-template-columns: 1fr; }
+  .compare-body { grid-template-columns: 1fr !important; }
+}
+
+/* Pill del appbar como botón: abre el picker para re-analizar. */
+.status-pill.appbar-model-btn {
+  cursor: pointer;
+  transition: 160ms;
+  border: 1px solid var(--outline-soft);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-pill.appbar-model-btn:hover:not(:disabled) {
+  background: var(--surf-2);
+  border-color: var(--primary);
+}
+.status-pill.appbar-model-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.status-pill.appbar-model-btn::after {
+  content: "▾";
+  margin-left: 6px;
+  font-size: 9px;
+  opacity: 0.7;
+}
+.status-pill.appbar-model-btn:disabled::after { content: ""; }
+
+/* Overlay fullscreen para el re-análisis: oscurece todo y centra el
+   ProcessingScreen reutilizado para mostrar pasos + animación. */
+.reanalyze-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(5, 10, 20, 0.88);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: reanalyze-fade-in 160ms ease-out;
+}
+.reanalyze-overlay > .processing { width: 100%; height: 100%; }
+@keyframes reanalyze-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

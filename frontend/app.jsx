@@ -32,6 +32,7 @@ const Icon = ({ name, size = 24, ...props }) => {
     layers: 'm12 16 7-4-2-1-5 3-5-3-2 1zm0-4 7-4-7-4-7 4zm0 8 7-4-2-1-5 3-5-3-2 1z',
     tune: 'M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z',
     error: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8',
+    clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -41,7 +42,7 @@ const Icon = ({ name, size = 24, ...props }) => {
 };
 
 // ───────────────────────── App Bar ─────────────────────────
-function AppBar({ onReset, onToggleTheme, theme, modelVersion }) {
+function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze, onPickModel }) {
   return (
     <header className="appbar">
       <div className="appbar-left">
@@ -59,14 +60,21 @@ function AppBar({ onReset, onToggleTheme, theme, modelVersion }) {
         </div>
         <div className="appbar-titles">
           <h1>VertebraAI</h1>
-          <span className="appbar-subtitle">{modelVersion || 'Segmentación de columna'}</span>
+          <span className="appbar-subtitle">{selectedModelName || 'Segmentación de columna'}</span>
         </div>
       </div>
 
       <div className="appbar-right">
-        <span className="status-pill">
-          <span className="status-dot" /> {modelVersion ? 'Modelo conectado' : 'Conectando…'}
-        </span>
+        <button
+          type="button"
+          className="status-pill appbar-model-btn"
+          onClick={canReanalyze ? onPickModel : undefined}
+          disabled={!canReanalyze}
+          title={canReanalyze ? "Cambiar modelo y re-analizar" : "Modelo conectado"}
+        >
+          <span className="status-dot" />
+          {canReanalyze && selectedModelName ? selectedModelName : (selectedModelName ? 'Modelo conectado' : 'Conectando…')}
+        </button>
         <button className="icon-btn" onClick={onToggleTheme} title="Cambiar tema">
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
         </button>
@@ -317,6 +325,24 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef(null);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const close = (e) => {
+      if (actionsRef.current && !actionsRef.current.contains(e.target)) {
+        setActionsOpen(false);
+      }
+    };
+    const escape = (e) => { if (e.key === 'Escape') setActionsOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [actionsOpen]);
 
   const handleWheel = (e) => {
     e.preventDefault();
@@ -446,9 +472,39 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
           <button className="btn-tonal" onClick={onCompare} title="Comparar con otro modelo">
             <Icon name="layers" size={18} /> Comparar
           </button>
-          <button className="btn-filled" onClick={() => downloadExport('overlay')} title="Descargar overlay">
-            <Icon name="download" size={18} /> Exportar
-          </button>
+          <div className="actions-menu" ref={actionsRef}>
+            <button
+              className="btn-filled"
+              onClick={() => setActionsOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={actionsOpen}
+              title="Acciones"
+            >
+              <Icon name="download" size={18} /> Acciones
+              <span className="caret" aria-hidden="true">▾</span>
+            </button>
+            {actionsOpen && (
+              <div className="actions-dropdown" role="menu">
+                <div className="actions-section-title">Exportar</div>
+                <button role="menuitem" onClick={() => { downloadExport('png'); setActionsOpen(false); }}>
+                  <Icon name="download" size={16} /> Original
+                </button>
+                <button role="menuitem" onClick={() => { downloadExport('mask'); setActionsOpen(false); }}>
+                  <Icon name="download" size={16} /> Máscara
+                </button>
+                <button role="menuitem" onClick={() => { downloadExport('overlay'); setActionsOpen(false); }}>
+                  <Icon name="download" size={16} /> Overlay
+                </button>
+                <button role="menuitem" onClick={() => { downloadExport('report'); setActionsOpen(false); }}>
+                  <Icon name="download" size={16} /> Reporte
+                </button>
+                <div className="actions-divider" />
+                <button role="menuitem" onClick={() => { setActionsOpen(false); onNew(); }}>
+                  <Icon name="refresh" size={16} /> Analizar otra radiografía
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -470,7 +526,10 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
             className="comparator"
             ref={sliderRef}
             style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              // -50%/-50% mantiene el centrado heredado del CSS (top:50% left:50%);
+              // el pan se aplica en el frame del elemento y el scale se hace
+              // respecto al transform-origin: center.
+              transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               aspectRatio: `${mask.dimensions.width} / ${mask.dimensions.height}`,
             }}
           >
@@ -687,27 +746,6 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
             </div>
           </section>
 
-          <section className="panel-card">
-            <header><h3>Exportar</h3></header>
-            <div className="export-buttons">
-              <button className="btn-outline" onClick={() => downloadExport('png')}>
-                <Icon name="download" size={16} /> Original
-              </button>
-              <button className="btn-outline" onClick={() => downloadExport('mask')}>
-                <Icon name="download" size={16} /> Máscara
-              </button>
-              <button className="btn-outline" onClick={() => downloadExport('overlay')}>
-                <Icon name="download" size={16} /> Overlay
-              </button>
-              <button className="btn-outline" onClick={() => downloadExport('report')}>
-                <Icon name="download" size={16} /> Reporte
-              </button>
-            </div>
-          </section>
-
-          <button className="btn-tonal full" onClick={onNew}>
-            <Icon name="refresh" size={18} /> Analizar otra radiografía
-          </button>
         </aside>
       </div>
     </div>
@@ -715,21 +753,69 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
 }
 
 // ───────────────────────── Comparación: panel reutilizable ─────────────────────────
-// Render compacto de un análisis: título (display_name del modelo), métricas
-// resumidas y la radiografía con su máscara superpuesta (overlay fijo).
-function ComparePane({ title, metrics, fileUrl, maskBase64 }) {
+// Render compacto de un análisis: título + métricas como barras de progreso
+// (Dice/IoU usan los mismos estilos conf-bar/conf-fill que la "Confianza
+// global" de la pantalla de resultados) + radiografía con máscara superpuesta.
+// Los slots no primarios reciben `onChange` para abrir el picker que reemplaza
+// el modelo del slot.
+function ComparePane({ title, metrics, fileUrl, maskBase64, primary, onChange, onError, error }) {
+  if (error) {
+    return (
+      <div className="compare-pane compare-status compare-status-error">
+        <Icon name="error" size={32} />
+        <p>{error}</p>
+        {onError && (
+          <button className="btn-tonal" onClick={onError}>
+            Reintentar con otro modelo
+          </button>
+        )}
+      </div>
+    );
+  }
   const maskUrl = `data:image/png;base64,${maskBase64}`;
   return (
     <div className="compare-pane">
-      <div className="compare-pane-title">
+      <div className="compare-pane-header">
         <h3>{title}</h3>
-        <span className="mono">
-          Dice {metrics.dice.toFixed(3)} · IoU {metrics.iou.toFixed(3)} · {metrics.latency_ms.toFixed(0)} ms
-        </span>
+        {!primary && onChange && (
+          <button
+            type="button"
+            className="compare-change-btn"
+            onClick={onChange}
+            title="Cambiar modelo"
+          >
+            <Icon name="tune" size={14} />
+            <span>Cambiar</span>
+            <span className="caret" aria-hidden="true">▾</span>
+          </button>
+        )}
       </div>
-      {/* El canvas toma el alto disponible vía flex; las imágenes usan
-          object-fit: contain para que la radiografía completa se vea
-          dentro del viewport sin scroll, preservando aspect ratio. */}
+      <div className="compare-metrics">
+        <div className="metric-row">
+          <div className="conf-row">
+            <span>Dice</span>
+            <b className="mono">{metrics.dice.toFixed(3)}</b>
+          </div>
+          <div className="conf-bar">
+            <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.dice)) * 100}%` }} />
+          </div>
+        </div>
+        <div className="metric-row">
+          <div className="conf-row">
+            <span>IoU</span>
+            <b className="mono">{metrics.iou.toFixed(3)}</b>
+          </div>
+          <div className="conf-bar">
+            <div className="conf-fill" style={{ width: `${Math.max(0, Math.min(1, metrics.iou)) * 100}%` }} />
+          </div>
+        </div>
+        <div className="metric-row metric-row-latency">
+          <div className="conf-row">
+            <span><Icon name="clock" size={12} /> Tiempo de ejecución</span>
+            <b className="mono">{metrics.latency_ms.toFixed(0)} ms</b>
+          </div>
+        </div>
+      </div>
       <div className="compare-canvas">
         <img className="compare-xray" src={fileUrl} alt="Radiografía original" />
         <img className="compare-mask" src={maskUrl} alt="Máscara del modelo" />
@@ -771,23 +857,37 @@ function ModelPickerModal({ models, onPick, onClose }) {
 }
 
 // ───────────────────────── Pantalla 3: comparación de modelos ─────────────────────────
+// Soporta hasta 2 slots de comparación (3 paneles totales: primario + 2). Cada
+// slot tiene su botón "cambiar modelo" que abre el picker. El picker excluye
+// todos los modelos ya visibles (primario + otros slots) para evitar duplicados.
 function CompareView({
   result,
   fileUrl,
   filename,
   models,
   selectedModelId,
-  compareModelId,
-  compareResult,
-  compareLoading,
-  compareError,
-  onPickCompare,
+  compareSlots,
+  onAddSlot,
+  onChangeSlot,
   onBack,
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const availableModels = models.filter((m) => m.id !== selectedModelId);
+  // pickerState: null | { mode: 'add' } | { mode: 'change', slotIdx }
+  const [pickerState, setPickerState] = useState(null);
+
   const primaryModel = models.find((m) => m.id === selectedModelId);
-  const compareModel = compareModelId ? models.find((m) => m.id === compareModelId) : null;
+  const usedIds = new Set([selectedModelId, ...compareSlots.map((s) => s.modelId)]);
+  // Excluye el primario y todos los slots; en modo 'change' también excluye el
+  // modelo actual del slot (sería un no-op).
+  const pickerModels = (() => {
+    if (!pickerState) return [];
+    if (pickerState.mode === 'add') {
+      return models.filter((m) => !usedIds.has(m.id));
+    }
+    return models.filter((m) => !usedIds.has(m.id));
+  })();
+
+  const canAddMore = compareSlots.length < 2 && models.some((m) => !usedIds.has(m.id));
+  const paneCount = 1 + compareSlots.length + (canAddMore ? 1 : 0);
 
   return (
     <div className="compare-shell">
@@ -801,55 +901,75 @@ function CompareView({
         </div>
       </div>
 
-      <div className="compare-body">
+      <div
+        className="compare-body"
+        style={{ gridTemplateColumns: `repeat(${paneCount}, minmax(0, 1fr))` }}
+      >
         <ComparePane
+          primary
           title={primaryModel?.display_name || 'Modelo A'}
           metrics={result.metrics.model_metrics}
           fileUrl={fileUrl}
           maskBase64={result.mask.data}
         />
 
-        {!compareModelId ? (
+        {compareSlots.map((slot, idx) => {
+          const slotModel = models.find((m) => m.id === slot.modelId);
+          const openChange = () => setPickerState({ mode: 'change', slotIdx: idx });
+          if (slot.error) {
+            return (
+              <ComparePane
+                key={`slot-${idx}`}
+                error={slot.error}
+                onError={openChange}
+              />
+            );
+          }
+          if (!slot.result) {
+            // Placeholder mínimo mientras corre el reanalyzing overlay; no se
+            // ve normalmente porque el overlay cubre todo, pero quedaría algo
+            // visible si el overlay se cerrase antes de tiempo.
+            return (
+              <div key={`slot-${idx}`} className="compare-pane compare-status">
+                <div className="spinner" />
+                <p>Ejecutando {slotModel?.display_name || 'modelo'}…</p>
+              </div>
+            );
+          }
+          return (
+            <ComparePane
+              key={`slot-${idx}`}
+              title={slotModel?.display_name || `Modelo ${idx + 2}`}
+              metrics={slot.result.metrics.model_metrics}
+              fileUrl={fileUrl}
+              maskBase64={slot.result.mask.data}
+              onChange={openChange}
+            />
+          );
+        })}
+
+        {canAddMore && (
           <button
             type="button"
             className="compare-empty"
-            onClick={() => setPickerOpen(true)}
-            disabled={availableModels.length === 0}
-            title={availableModels.length === 0
-              ? 'No hay otros modelos publicados'
-              : 'Elegir modelo para comparar'}
+            onClick={() => setPickerState({ mode: 'add' })}
+            title="Elegir modelo para comparar"
           >
             <span className="compare-empty-plus">+</span>
-            <span className="compare-empty-label">Comparar con otro modelo</span>
+            <span className="compare-empty-label">Seleccionar otro modelo<br/>para comparar</span>
           </button>
-        ) : compareLoading ? (
-          <div className="compare-pane compare-status">
-            <div className="spinner" />
-            <p>Ejecutando {compareModel?.display_name || 'modelo'}…</p>
-          </div>
-        ) : compareError ? (
-          <div className="compare-pane compare-status compare-status-error">
-            <Icon name="error" size={32} />
-            <p>{compareError}</p>
-            <button className="btn-tonal" onClick={() => setPickerOpen(true)}>
-              Reintentar con otro modelo
-            </button>
-          </div>
-        ) : compareResult ? (
-          <ComparePane
-            title={compareModel?.display_name || 'Modelo B'}
-            metrics={compareResult.metrics.model_metrics}
-            fileUrl={fileUrl}
-            maskBase64={compareResult.mask.data}
-          />
-        ) : null}
+        )}
       </div>
 
-      {pickerOpen && (
+      {pickerState && (
         <ModelPickerModal
-          models={availableModels}
-          onPick={(id) => { setPickerOpen(false); onPickCompare(id); }}
-          onClose={() => setPickerOpen(false)}
+          models={pickerModels}
+          onPick={(id) => {
+            if (pickerState.mode === 'add') onAddSlot(id);
+            else onChangeSlot(pickerState.slotIdx, id);
+            setPickerState(null);
+          }}
+          onClose={() => setPickerState(null)}
         />
       )}
     </div>
@@ -870,27 +990,19 @@ function App() {
   const [originalFile, setOriginalFile] = useState(null);
   const [result, setResult] = useState(null);       // Respuesta del backend
   const [error, setError] = useState(null);
-  const [modelVersion, setModelVersion] = useState(null);
   const [models, setModels] = useState([]);
   const [selectedModelId, setSelectedModelId] = useState('medsam');
-  // Estado de comparación contra un segundo modelo (pantalla 3).
-  const [compareModelId, setCompareModelId] = useState(null);
-  const [compareResult, setCompareResult] = useState(null);
-  const [compareLoading, setCompareLoading] = useState(false);
-  const [compareError, setCompareError] = useState(null);
+  // Comparación: hasta 2 slots (pantalla 3 muestra 3 paneles totales con el
+  // primario). Cada slot: { modelId, result?, error? }.
+  const [compareSlots, setCompareSlots] = useState([]);
+  // Picker del appbar + estado de re-análisis con overlay fullscreen.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(null); // null | { modelId }
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULS);
 
   useEffect(() => {
     document.documentElement.dataset.theme = tweaks.theme;
   }, [tweaks.theme]);
-
-  // Health check inicial para mostrar versión del modelo
-  useEffect(() => {
-    fetch(`${API_BASE}/health`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setModelVersion(data.model_version); })
-      .catch(() => {/* silencioso: el AppBar mostrará "Conectando…" */});
-  }, []);
 
   // Catálogo de modelos para las tarjetas seleccionables de la pantalla de upload.
   // Si el backend no expone 'medsam' caemos al primer modelo del catálogo.
@@ -908,7 +1020,8 @@ function App() {
       .catch(() => {/* silencioso: UploadZone mostrará "Cargando modelos…" */});
   }, []);
 
-  const start = async (file) => {
+  const start = async (file, modelIdOverride) => {
+    const modelToUse = modelIdOverride || selectedModelId;
     setFilename(file.name);
     setOriginalFile(file);
     const localUrl = URL.createObjectURL(file);
@@ -919,22 +1032,14 @@ function App() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('model', selectedModelId);
+      formData.append('model', modelToUse);
 
-      const response = await fetch(`${API_BASE}/xrays`, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
       if (!response.ok) {
         let message = `HTTP ${response.status}`;
-        try {
-          const errBody = await response.json();
-          message = errBody.detail || errBody.error || message;
-        } catch {/* sin cuerpo JSON */}
+        try { const errBody = await response.json(); message = errBody.detail || errBody.error || message; } catch {}
         throw new Error(message);
       }
-
       const data = await response.json();
       setResult(data);
       setPhase('result');
@@ -953,51 +1058,88 @@ function App() {
     setOriginalFile(null);
     setResult(null);
     setError(null);
-    setCompareModelId(null);
-    setCompareResult(null);
-    setCompareError(null);
-    setCompareLoading(false);
+    setCompareSlots([]);
   };
 
-  // Comparación con un segundo modelo: re-submit del MISMO file al endpoint
-  // /xrays con otro `model`. Vive como estado independiente para no pisar el
-  // resultado del primer análisis (que sigue visible en la pantalla 3).
-  const runComparison = async (modelId) => {
-    if (!originalFile) return;
-    setCompareModelId(modelId);
-    setCompareLoading(true);
-    setCompareError(null);
-    setCompareResult(null);
+  // POST /xrays con el archivo cargado y el modelo dado. Helper compartido
+  // por todas las acciones que disparan inferencia desde la pantalla de
+  // resultados o comparación (no por el flujo de upload inicial).
+  const _runAnalysisFor = async (modelId) => {
+    const formData = new FormData();
+    formData.append('file', originalFile);
+    formData.append('model', modelId);
+    const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
+    if (!response.ok) {
+      let message = `HTTP ${response.status}`;
+      try { const errBody = await response.json(); message = errBody.detail || errBody.error || message; } catch {}
+      throw new Error(message);
+    }
+    return response.json();
+  };
+
+  // Re-análisis (pantalla 2): reemplaza el resultado actual con otro modelo.
+  const reanalyzeWith = async (modelId) => {
+    if (!originalFile || modelId === selectedModelId) {
+      setPickerOpen(false);
+      return;
+    }
+    setPickerOpen(false);
+    setReanalyzing({ modelId });
     try {
-      const formData = new FormData();
-      formData.append('file', originalFile);
-      formData.append('model', modelId);
-      const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
-      if (!response.ok) {
-        let message = `HTTP ${response.status}`;
-        try {
-          const errBody = await response.json();
-          message = errBody.detail || errBody.error || message;
-        } catch {/* sin cuerpo JSON */}
-        throw new Error(message);
-      }
-      setCompareResult(await response.json());
+      const data = await _runAnalysisFor(modelId);
+      setResult(data);
+      setSelectedModelId(modelId);
+      setCompareSlots([]);
     } catch (err) {
-      console.error('Error en comparación:', err);
-      setCompareError(err.message || 'No se pudo ejecutar la comparación');
+      console.error('Error en re-análisis:', err);
+      setError(err.message || 'No se pudo ejecutar el re-análisis');
+      setPhase('error');
     } finally {
-      setCompareLoading(false);
+      setReanalyzing(null);
+    }
+  };
+
+  // Comparación: añade un slot ejecutando el modelo elegido. Muestra el
+  // overlay fullscreen igual que el re-análisis (pantalla 2).
+  const addCompareSlot = async (modelId) => {
+    if (!originalFile) return;
+    setReanalyzing({ modelId });
+    try {
+      const data = await _runAnalysisFor(modelId);
+      setCompareSlots((prev) => [...prev, { modelId, result: data, error: null }]);
+    } catch (err) {
+      console.error('Error agregando comparación:', err);
+      setCompareSlots((prev) => [...prev, { modelId, result: null, error: err.message || 'Error de comparación' }]);
+    } finally {
+      setReanalyzing(null);
+    }
+  };
+
+  // Comparación: reemplaza el modelo de un slot existente. Mismo overlay.
+  const changeCompareSlot = async (slotIdx, newModelId) => {
+    if (!originalFile) return;
+    setReanalyzing({ modelId: newModelId });
+    try {
+      const data = await _runAnalysisFor(newModelId);
+      setCompareSlots((prev) => prev.map((s, i) => i === slotIdx ? { modelId: newModelId, result: data, error: null } : s));
+    } catch (err) {
+      console.error('Error cambiando modelo del slot:', err);
+      setCompareSlots((prev) => prev.map((s, i) => i === slotIdx ? { modelId: newModelId, result: null, error: err.message || 'Error de comparación' } : s));
+    } finally {
+      setReanalyzing(null);
     }
   };
 
   const enterCompare = () => {
-    setCompareResult(null);
-    setCompareModelId(null);
-    setCompareError(null);
-    setCompareLoading(false);
+    setCompareSlots([]);
     setPhase('compare');
   };
   const exitCompare = () => setPhase('result');
+
+  // Derivados para el AppBar: el título usa el display_name del modelo activo.
+  const selectedModel = models.find((m) => m.id === selectedModelId);
+  const selectedModelName = selectedModel?.display_name || null;
+  const canReanalyze = phase === 'result' && !!originalFile;
 
   return (
     <div className="app">
@@ -1005,7 +1147,9 @@ function App() {
         onReset={reset}
         onToggleTheme={() => setTweak('theme', tweaks.theme === 'dark' ? 'light' : 'dark')}
         theme={tweaks.theme}
-        modelVersion={modelVersion}
+        selectedModelName={selectedModelName}
+        canReanalyze={canReanalyze}
+        onPickModel={() => setPickerOpen(true)}
       />
 
       <main className="main">
@@ -1041,15 +1185,30 @@ function App() {
             filename={filename}
             models={models}
             selectedModelId={selectedModelId}
-            compareModelId={compareModelId}
-            compareResult={compareResult}
-            compareLoading={compareLoading}
-            compareError={compareError}
-            onPickCompare={runComparison}
+            compareSlots={compareSlots}
+            onAddSlot={addCompareSlot}
+            onChangeSlot={changeCompareSlot}
             onBack={exitCompare}
           />
         )}
       </main>
+
+      {pickerOpen && (
+        <ModelPickerModal
+          models={models.filter((m) => m.id !== selectedModelId)}
+          onPick={(id) => reanalyzeWith(id)}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+      {reanalyzing && (
+        <div className="reanalyze-overlay">
+          <ProcessingScreen
+            filename={filename}
+            fileUrl={fileUrl}
+            steps={models.find((m) => m.id === reanalyzing.modelId)?.processing_steps || []}
+          />
+        </div>
+      )}
 
       <footer className="app-footer mono">
         <span>VertebraAI · Apoyo diagnóstico — no sustituye criterio clínico</span>
