@@ -64,6 +64,17 @@ _VERTEBRAPROMPT_BOXREFINER = ModelCard(
         "image_size": "1024x1024",
         "input_channels": "1 (grayscale RGB-broadcasted)",
     },
+    processing_steps=[
+        "Decodificación de imagen",
+        "Letterbox 1024×1024 + normalización por percentiles",
+        "VertebraPrompt-Net (512×512): heatmap + wh + offset",
+        "DP anatómico → cajas T1–L5 con plantilla mediana",
+        "BoxRefiner: corrección local de cajas (192×192)",
+        "MedSAM box_only por caja → máscaras binarias",
+        "Composición y reverse-letterbox al espacio original",
+        "Cálculo métricas por vértebra",
+        "Generación máscara coloreada",
+    ],
 )
 
 
@@ -113,6 +124,17 @@ _PROGRESSIVE_UNET_BINARY = ModelCard(
         "loss": "BCE + Dice",
         "remap_strategy": "band-split top-to-bottom → T1..L5 (IDs 6..22)",
     },
+    processing_steps=[
+        "Decodificación de imagen",
+        "Conversión a escala de grises",
+        "Resize a 512×256 (paper-like)",
+        "Forward Progressive U-Net (binary, deep-supervision)",
+        "Sigmoid + threshold 0.5 → máscara binaria",
+        "Resize NEAREST al tamaño original",
+        "Band-split top-to-bottom → IDs T1–L5 (6..22)",
+        "Cálculo métricas por vértebra",
+        "Generación máscara coloreada",
+    ],
 )
 
 

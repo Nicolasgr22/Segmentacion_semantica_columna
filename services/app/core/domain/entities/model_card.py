@@ -25,3 +25,8 @@ class ModelCard:
     notebook: str
     status: str = "active"
     extra: dict[str, str] = field(default_factory=dict)
+    # Pasos del pipeline del modelo. Source of truth: cada modelo declara los
+    # suyos en el registry; /models los expone, /xrays los retorna en el
+    # campo `processing.steps` del análisis, y el frontend los muestra en la
+    # animación durante la inferencia.
+    processing_steps: list[str] = field(default_factory=list)

@@ -23,6 +23,7 @@ class ModelCardResponse(BaseModel):
     notebook: str
     status: str
     extra: dict[str, str] = {}
+    processing_steps: list[str] = []
 
 
 class ModelsListResponse(BaseModel):
@@ -46,4 +47,5 @@ def model_card_to_response(card: ModelCard) -> ModelCardResponse:
         notebook=card.notebook,
         status=card.status,
         extra=dict(card.extra),
+        processing_steps=list(card.processing_steps),
     )

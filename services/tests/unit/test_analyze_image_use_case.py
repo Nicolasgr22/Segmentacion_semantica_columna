@@ -70,17 +70,32 @@ async def test_execute_raises_on_tiny_image(
 async def test_processing_steps_recorded(
     dummy_image_bytes, mock_model_port, mock_storage_port
 ):
-    """Verifica que se reportan las etapas del pipeline ganador del notebook 06.
-    El use case ya no aplica CLAHE/letterbox: el adapter hace el preprocesamiento
-    exacto del notebook (resize 1024 + percentiles 1/99.5)."""
+    """Los pasos del pipeline ya no se hardcodean en el use case: vienen
+    declarativos del ModelCard (registry) y el router los pasa como parámetro.
+    El use case solo los propaga al análisis. Aquí simulamos al router."""
+    use_case = AnalyzeImageUseCase(model=mock_model_port, storage=mock_storage_port)
+    declared_steps = [
+        "Decodificación de imagen",
+        "Letterbox 1024×1024 + normalización por percentiles",
+        "VertebraPrompt-Net (512×512): heatmap + wh + offset",
+        "BoxRefiner: corrección local de cajas (192×192)",
+        "MedSAM box_only por caja → máscaras binarias",
+    ]
+    result = await use_case.execute(
+        dummy_image_bytes, "test.png", processing_steps=declared_steps
+    )
+    assert result.processing_steps == declared_steps
+
+
+@pytest.mark.asyncio
+async def test_processing_steps_default_to_empty(
+    dummy_image_bytes, mock_model_port, mock_storage_port
+):
+    """Si el caller no pasa pasos, la respuesta queda con lista vacía. El
+    frontend cae al placeholder genérico ('Procesando…') en ese caso."""
     use_case = AnalyzeImageUseCase(model=mock_model_port, storage=mock_storage_port)
     result = await use_case.execute(dummy_image_bytes, "test.png")
-    steps_str = " ".join(result.processing_steps)
-    assert "Decodificación" in steps_str
-    assert "percentiles" in steps_str.lower()
-    assert "VertebraPrompt-Net" in steps_str
-    assert "BoxRefiner" in steps_str
-    assert "MedSAM" in steps_str
+    assert result.processing_steps == []
 
 
 @pytest.mark.asyncio

@@ -7,9 +7,14 @@ from app.api.v1.schemas.requests import ModelName
 from app.api.v1.schemas.responses import AnalyzeResponse, ErrorResponse, analysis_to_response
 from app.config import settings
 from app.core.domain.ports.model_port import ModelPort
+from app.core.domain.ports.model_registry_port import ModelRegistryPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase, InvalidImageError
-from app.dependencies import get_model_dispatch, get_storage_adapter
+from app.dependencies import (
+    get_model_dispatch,
+    get_model_registry_port,
+    get_storage_adapter,
+)
 from app.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,7 @@ async def create_analysis(
     ),
     model_registry: dict[ModelName, ModelPort] = Depends(get_model_dispatch),
     storage: StoragePort = Depends(get_storage_adapter),
+    registry: ModelRegistryPort = Depends(get_model_registry_port),
 ) -> AnalyzeResponse:
     accepted_types = ("image/png", "image/jpeg", "image/jpg", "application/octet-stream")
     if file.content_type not in accepted_types:
@@ -67,11 +73,22 @@ async def create_analysis(
             detail=f"La imagen supera el límite de {settings.max_upload_mb} MB",
         )
 
+    # Los pasos del pipeline son metadatos declarativos del modelo (single
+    # source of truth en el ModelCard del registry). Aquí los buscamos por id
+    # para que la respuesta del análisis los incluya y el frontend muestre los
+    # del modelo realmente ejecutado.
+    card = await registry.get_model(model.value)
+    processing_steps = list(card.processing_steps) if card else []
+
     use_case = AnalyzeImageUseCase(model=model_port, storage=storage)
 
     try:
         analysis = await asyncio.wait_for(
-            use_case.execute(image_bytes, file.filename or "unknown.png"),
+            use_case.execute(
+                image_bytes,
+                file.filename or "unknown.png",
+                processing_steps=processing_steps,
+            ),
             timeout=settings.inference_timeout_s,
         )
     except InvalidImageError as exc:

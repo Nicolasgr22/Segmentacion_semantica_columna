@@ -202,23 +202,11 @@ function UploadZone({ onUpload, models, selectedModelId, onSelectModel }) {
 }
 
 // ───────────────────────── Pantalla de procesamiento ─────────────────────────
-// Estos pasos deben coincidir exactamente con los que el backend agrega a
-// `processing.steps` en services/app/core/use_cases/analyze_image.py.
-// Si cambian allá, cambiarlos también acá (no hay streaming: la animación es
-// una estimación de UX mientras se espera la respuesta).
-const PROCESS_STEPS = [
-  'Decodificación de imagen',
-  'Letterbox 1024×1024 + normalización por percentiles',
-  'VertebraPrompt-Net (512×512): heatmap + wh + offset',
-  'DP anatómico → cajas T1–L5 con plantilla mediana',
-  'BoxRefiner: corrección local de cajas (192×192)',
-  'MedSAM box_only por caja → máscaras binarias',
-  'Composición y reverse-letterbox al espacio original',
-  'Cálculo métricas por vértebra',
-  'Generación máscara coloreada',
-];
-
-function ProcessingScreen({ filename, fileUrl }) {
+// La lista de pasos viene del catálogo /models (campo `processing_steps` del
+// ModelCard). No es streaming: la animación es una estimación de UX mientras
+// se espera la respuesta. Si el backend no provee pasos, fallback genérico.
+function ProcessingScreen({ filename, fileUrl, steps }) {
+  const stepList = (steps && steps.length > 0) ? steps : ['Procesando…'];
   // Avance suave de UI mientras se espera la respuesta del backend
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -231,12 +219,12 @@ function ProcessingScreen({ filename, fileUrl }) {
       setProgress((p) => {
         // Curva asintótica: avanza rápido al inicio y desacelera cerca del 90%
         const next = p + (90 - p) * 0.05;
-        setStep(Math.min(PROCESS_STEPS.length - 1, Math.floor((next / 100) * PROCESS_STEPS.length)));
+        setStep(Math.min(stepList.length - 1, Math.floor((next / 100) * stepList.length)));
         return next;
       });
     }, 200);
     return () => clearInterval(interval);
-  }, []);
+  }, [stepList.length]);
 
   // Aspect ratio dinámico = dims reales de la imagen subida; así el frame de
   // procesamiento ocupa exactamente el mismo lugar que el .comparator del
@@ -282,11 +270,11 @@ function ProcessingScreen({ filename, fileUrl }) {
           </div>
           <div className="progress-meta">
             <span>{Math.round(progress)}%</span>
-            <span className="mono">{PROCESS_STEPS[step]}…</span>
+            <span className="mono">{stepList[step]}…</span>
           </div>
 
           <ul className="step-list">
-            {PROCESS_STEPS.map((s, i) => (
+            {stepList.map((s, i) => (
               <li key={s} className={i < step ? 'done' : i === step ? 'active' : ''}>
                 <span className="step-bullet">
                   {i < step ? <Icon name="check" size={12} /> : i === step ? <span className="spinner" /> : <span className="dot" />}
@@ -1030,7 +1018,13 @@ function App() {
             onSelectModel={setSelectedModelId}
           />
         )}
-        {phase === 'processing' && <ProcessingScreen filename={filename} fileUrl={fileUrl} />}
+        {phase === 'processing' && (
+          <ProcessingScreen
+            filename={filename}
+            fileUrl={fileUrl}
+            steps={models.find((m) => m.id === selectedModelId)?.processing_steps || []}
+          />
+        )}
         {phase === 'error' && <ErrorScreen error={error} onRetry={reset} />}
         {phase === 'result' && result && (
           <ResultView

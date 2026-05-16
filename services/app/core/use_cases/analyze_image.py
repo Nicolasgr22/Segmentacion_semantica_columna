@@ -4,7 +4,6 @@ import io
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 import numpy as np
 from PIL import Image, UnidentifiedImageError
@@ -48,31 +47,21 @@ class AnalyzeImageUseCase:
         self._model = model
         self._storage = storage
 
-    async def execute(self, image_bytes: bytes, filename: str) -> VertebraAnalysis:
+    async def execute(
+        self,
+        image_bytes: bytes,
+        filename: str,
+        processing_steps: list[str] | None = None,
+    ) -> VertebraAnalysis:
+        # `processing_steps` viene del ModelCard del modelo elegido (single
+        # source of truth). El use case no genera ni interpola pasos: solo
+        # propaga la lista declarativa que el modelo describe en el catálogo.
         t_start = time.perf_counter()
-        steps: list[str] = []
 
         image_rgb = self._validate_and_decode(image_bytes)
-        steps.append("Decodificación de imagen")
-
-        # 2. Inferencia (el adapter aplica letterbox 1024×1024 + normalización
-        #    por percentiles 1/99.5, decodificación DP anatómica, BoxRefiner y
-        #    MedSAM box_only — replica el notebook 06).
         model_output = await self._model.predict(image_rgb)
-        steps.append("Letterbox 1024×1024 + normalización por percentiles")
-        steps.append("VertebraPrompt-Net (512×512): heatmap + wh + offset")
-        steps.append("DP anatómico → cajas T1–L5 con plantilla mediana")
-        steps.append("BoxRefiner: corrección local de cajas (192×192)")
-        steps.append("MedSAM box_only por caja → máscaras binarias")
-        steps.append("Composición y reverse-letterbox al espacio original")
-
-        # 4. Post-procesamiento
         vertebrae = build_vertebrae_from_mask(model_output.mask, model_output.probabilities)
-        steps.append("Cálculo métricas por vértebra")
-
         colored_mask_bytes = self._build_colored_mask(model_output.mask)
-        steps.append("Generación máscara coloreada")
-
         metrics = self._compute_metrics(model_output, vertebrae)
 
         total_ms = (time.perf_counter() - t_start) * 1000
@@ -88,7 +77,7 @@ class AnalyzeImageUseCase:
             ),
             metrics=metrics,
             vertebrae=vertebrae,
-            processing_steps=steps,
+            processing_steps=list(processing_steps or []),
             total_time_ms=round(total_ms, 2),
             original_image_bytes=image_bytes,
         )
