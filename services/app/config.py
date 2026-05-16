@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # Experimento B del notebook unet (Progressive U-Net binaria estilo paper).
     progressive_unet_checkpoint: str = "model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth"
 
+    # Unet++ con encoder efficientnet-b7 entrenado por parches
+    # (notebooks/unet++/Unet++_patches.ipynb).
+    unetpp_patches_checkpoint: str = "model-pkg/unet++_patches/unet++_patches.pth"
+
     max_upload_mb: int = 50
     inference_timeout_s: int = 60
 

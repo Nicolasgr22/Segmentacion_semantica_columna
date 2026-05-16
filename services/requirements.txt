@@ -11,6 +11,8 @@ transformers>=4.40.0
 torch>=2.1.0
 torchvision>=0.16.0
 segment-anything>=1.0
+# Requerido por el adapter Unet++ por parches (encoder EfficientNet-B7).
+segmentation-models-pytorch>=0.3.3
 # Requerido para deserializar el checkpoint del Experimento B (UNet binario),
 # que MLflow guardó con `mlflow.pytorch.log_model` usando cloudpickle.
 cloudpickle>=3.0.0

@@ -17,7 +17,12 @@ from app.core.domain.entities.analysis import (
 from app.core.domain.entities.vertebra import VertebralRegion, build_vertebrae_from_mask
 from app.core.domain.ports.model_port import ModelOutput, ModelPort
 from app.core.domain.ports.storage_port import StoragePort
-from app.dependencies import get_model_adapter, get_storage_adapter
+from app.api.v1.schemas.requests import ModelName
+from app.dependencies import (
+    get_model_adapter,
+    get_model_dispatch,
+    get_storage_adapter,
+)
 from app.main import app
 from app.rate_limit import limiter
 
@@ -108,7 +113,17 @@ def mock_storage_port() -> StoragePort:
 
 @pytest.fixture
 def test_client(mock_model_port, mock_storage_port) -> TestClient:
+    # Sustituimos también `get_model_dispatch` para no obligar a construir los
+    # adapters secundarios (Progressive U-Net, Unet++ por parches) durante los
+    # tests: cada uno tiene sus tests dedicados con un nn.Module dummy y aquí
+    # solo queremos validar el endpoint con el modelo por defecto.
+    mocked_dispatch = {
+        ModelName.MEDSAM: mock_model_port,
+        ModelName.PROGRESSIVE_UNET_BINARY: mock_model_port,
+        ModelName.UNETPP_PATCHES: mock_model_port,
+    }
     app.dependency_overrides[get_model_adapter] = lambda: mock_model_port
+    app.dependency_overrides[get_model_dispatch] = lambda: mocked_dispatch
     app.dependency_overrides[get_storage_adapter] = lambda: mock_storage_port
     with TestClient(app, raise_server_exceptions=False) as client:
         yield client

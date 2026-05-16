@@ -12,6 +12,9 @@ from app.core.use_cases.export_result import ExportResultUseCase
 from app.infrastructure.adapters.model.progressive_unet_adapter import (
     ProgressiveUNetBinaryAdapter,
 )
+from app.infrastructure.adapters.model.unetpp_patches_adapter import (
+    UnetPlusPlusPatchesAdapter,
+)
 from app.infrastructure.adapters.model.vertebraprompt_boxrefiner_adapter import (
     VertebraPromptBoxRefinerAdapter,
 )
@@ -41,6 +44,13 @@ def get_progressive_unet_adapter() -> ProgressiveUNetBinaryAdapter:
 
 
 @lru_cache(maxsize=1)
+def get_unetpp_patches_adapter() -> UnetPlusPlusPatchesAdapter:
+    adapter = UnetPlusPlusPatchesAdapter(device=settings.model_device)
+    adapter.load_model(checkpoint=settings.unetpp_patches_checkpoint)
+    return adapter
+
+
+@lru_cache(maxsize=1)
 def get_storage_adapter() -> InMemoryStorageAdapter:
     return InMemoryStorageAdapter(max_entries=100)
 
@@ -63,6 +73,7 @@ def get_model_registry_port(
 def get_model_dispatch(
     medsam: ModelPort = Depends(get_model_adapter),
     progressive_unet: ModelPort = Depends(get_progressive_unet_adapter),
+    unetpp_patches: ModelPort = Depends(get_unetpp_patches_adapter),
 ) -> dict[ModelName, ModelPort]:
     """Mapea cada ModelName al adapter cargado.
 
@@ -74,6 +85,7 @@ def get_model_dispatch(
     return {
         ModelName.MEDSAM: medsam,
         ModelName.PROGRESSIVE_UNET_BINARY: progressive_unet,
+        ModelName.UNETPP_PATCHES: unetpp_patches,
     }
 
 

@@ -96,7 +96,6 @@ function ModelCard({ model, selected, onClick }) {
         <h3 className="model-card-title">{model.display_name}</h3>
         {selected && <Icon name="check" size={16} className="model-card-check" />}
       </div>
-      <p className="model-card-desc">{model.description}</p>
       {kpis.length > 0 && (
         <div className="kpi-row model-card-kpis">
           {kpis.map((m) => (
