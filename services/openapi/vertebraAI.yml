@@ -123,7 +123,7 @@ paths:
                     dice: 0.915
                     iou: 0.844
                     latency_ms: 3210.5
-                    model_version: "nvidia/mit-b2"
+                    model_version: "vertebraprompt+boxrefiner+medsam-vit-b"
                 vertebrae:
                   - id: "C7"
                     label: "C7"
@@ -144,9 +144,10 @@ paths:
                     - "Decodificación PNG"
                     - "CLAHE (clipLimit=2.0)"
                     - "Letterbox 512×512"
-                    - "Inferencia SegFormer-B2"
-                    - "Upsample logits 4×"
-                    - "Argmax → máscara"
+                    - "VertebraPrompt-Net (heatmap + cajas)"
+                    - "BoxRefiner (ajuste de cajas)"
+                    - "MedSAM ViT-B fine-tuned (máscaras por vértebra)"
+                    - "Composición máscara multi-clase"
                     - "Cálculo métricas por vértebra"
                     - "Generación máscara coloreada"
                   total_time_ms: 3410.2

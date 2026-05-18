@@ -31,7 +31,7 @@ El sistema soporta múltiples modelos de segmentación seleccionables en cada re
 |---|---|---|
 | **Radiólogo / Médico** | Usuario | Sube radiografías y consulta resultados vía el frontend |
 | **Aplicación Frontend** | Sistema externo | Interfaz web que consume la API REST |
-| **Hugging Face Hub** | Sistema externo | Repositorio de pesos del modelo SegFormer-B2 (`nvidia/mit-b2`), descargados al inicio del servicio |
+| **Google Drive** | Sistema externo | Almacenamiento de checkpoints del pipeline MedSAM (`vertebraprompt_net`, `box_refiner`, `medsam_finetuned`) |
 | **model-pkg (.whl)** | Paquete externo | Wheel de MedSAM fine-tuneado (segmentación binaria), instalable como dependencia opcional |
 
 ### Endpoints Públicos
@@ -48,8 +48,7 @@ El endpoint POST acepta un campo de formulario opcional `model` que determina el
 
 | Valor | Modelo | Estado |
 |---|---|---|
-| `segformer-b2` (default) | SegFormer-B2 `nvidia/mit-b2` — segmentación semántica 23 clases | Disponible |
-| `medsam` | MedSAM ViT-B fine-tuned — segmentación binaria de columna | Próximamente |
+| `medsam` (default) | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned | Disponible |
 
 ---
 
@@ -97,7 +96,7 @@ Responsable de la comunicación HTTP: enrutamiento, validación de entrada y ser
 
 **`schemas/`**
 
-- `ModelName` (enum str): `segformer-b2`, `medsam` — valida el campo `model` del form.
+- `ModelName` (enum str): `medsam` — valida el campo `model` del form.
 - `ExportFormat` (enum str): `png`, `mask`, `overlay`, `report`.
 - `AnalyzeResponse`, `HealthResponse`: modelos Pydantic para serialización de respuestas.
 
@@ -140,7 +139,7 @@ Recupera un `VertebraAnalysis` por `study_id` y genera el artefacto de exportaci
 
 | Port | Métodos | Implementaciones |
 |---|---|---|
-| `ModelPort` | `predict(image)`, `is_loaded()`, `get_model_version()` | `SegFormerAdapter`, `MedSAMAdapter` |
+| `ModelPort` | `predict(image)`, `is_loaded()`, `get_model_version()` | `VertebraPromptBoxRefinerAdapter` |
 | `StoragePort` | `save()`, `get()`, `exists()`, `delete()` | `InMemoryStorageAdapter` |
 
 ---
@@ -149,18 +148,12 @@ Recupera un `VertebraAnalysis` por `study_id` y genera el artefacto de exportaci
 
 Implementaciones concretas de los ports. Conocen librerías externas (torch, transformers, model_medsam).
 
-**`SegFormerAdapter`**
+**`VertebraPromptBoxRefinerAdapter`** _(adapter activo)_
 
-- Implementa `ModelPort` usando `SegformerForSemanticSegmentation` (HuggingFace Transformers).
-- `load_model()`: descarga o carga pesos locales; configura `id2label`/`label2id` para las 23 clases.
+- Implementa `ModelPort` con el pipeline ganador del notebook 06.
+- `load_model()`: carga las 4 redes en memoria (VertebraPrompt-Net, BoxRefiner, SAM ViT-B base, MedSAM fine-tuned decoder+encoder parcial).
 - `predict()`: asíncrono — delega `_sync_predict()` a un `ThreadPoolExecutor` para no bloquear el event loop de FastAPI.
-- Pipeline de inferencia: `processor → pixel_values → model → logits (B,23,H/4,W/4) → interpolate bilinear 512×512 → softmax + argmax → mask`.
-
-**`MedSAMAdapter`** _(próximamente)_
-
-- Implementa `ModelPort` usando `MedSAMPredictor` del paquete `model_medsam`.
-- Produce máscara binaria (0=fondo, 1=columna) que convierte a `ModelOutput` con 2 clases.
-- Requiere dos checkpoints: el SAM base (`sam_vit_b_01ec64.pth`) y los pesos fine-tuneados (`medsam_lastblock_unfrozen.pth`).
+- Pipeline de inferencia: `resize 1024×1024 + norm percentil → VertebraPrompt-Net (heatmap+cajas) → BoxRefiner (ajusta cajas) → MedSAM por caja → composición multi-clase → máscara uint8`.
 
 **`InMemoryStorageAdapter`**
 
@@ -170,7 +163,7 @@ Implementaciones concretas de los ports. Conocen librerías externas (torch, tra
 
 **`dependencies.py` — Contenedor de DI**
 
-- `get_model_adapter()` `@lru_cache`: instancia y carga `SegFormerAdapter` una sola vez al primer request. Usa `settings.segformer_b2_checkpoint` y `settings.segformer_b2_local_path`.
+- `get_model_adapter()` `@lru_cache`: instancia y carga `VertebraPromptBoxRefinerAdapter` una sola vez al primer request. Usa las rutas de checkpoints definidas en `settings`.
 - `get_model_registry()`: construye el dict `{ModelName → ModelPort}`. Agregar un nuevo modelo = añadir su adapter aquí y descomentar la entrada.
 - `get_storage_adapter()` `@lru_cache`: instancia `InMemoryStorageAdapter` una sola vez.
 
@@ -180,11 +173,11 @@ Configuración cargada desde variables de entorno o archivo `.env` vía Pydantic
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `SEGFORMER_B2_CHECKPOINT` | `nvidia/mit-b2` | Checkpoint HuggingFace o ruta local |
-| `SEGFORMER_B2_LOCAL_PATH` | _(vacío)_ | Si se especifica, tiene prioridad sobre HuggingFace |
-| `MEDSAM_SAM_CHECKPOINT` | `model-pkg/sam_vit_b_01ec64.pth` | Pesos SAM base para MedSAM |
-| `MEDSAM_FINETUNED_CHECKPOINT` | `model-pkg/medsam_lastblock_unfrozen.pth` | Pesos fine-tuneados MedSAM |
-| `MODEL_DEVICE` | `cpu` | `cpu` o `cuda` |
+| `MEDSAM_PROMPT_NET_CHECKPOINT` | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` | Checkpoint de VertebraPrompt-Net |
+| `MEDSAM_BOX_REFINER_CHECKPOINT` | `model-pkg/medsam/box_refiner_best.pt` | Checkpoint de BoxRefiner |
+| `MEDSAM_SAM_CHECKPOINT` | `model-pkg/sam_vit_b_01ec64.pth` | Pesos SAM ViT-B base |
+| `MEDSAM_FINETUNED_CHECKPOINT` | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` | Decoder + encoder parcial fine-tuned |
+| `MODEL_DEVICE` | `cpu` | `cpu`, `cuda` o `mps` |
 | `MAX_UPLOAD_MB` | `50` | Límite de tamaño de imagen |
 | `INFERENCE_TIMEOUT_S` | `60` | Timeout de inferencia en segundos |
 
@@ -200,7 +193,7 @@ Configuración cargada desde variables de entorno o archivo `.env` vía Pydantic
 
 #### Fase 1: Recepción y validación en el Router (pasos 1–7)
 
-El cliente envía un `multipart/form-data` con la imagen PNG y el campo `model` (default `segformer-b2`). El router valida en orden:
+El cliente envía un `multipart/form-data` con la imagen PNG y el campo `model` (default `medsam`). El router valida en orden:
 
 1. **Content-Type**: solo `image/png` o `application/octet-stream` son aceptados → `400` en caso contrario.
 2. **Resolución del Model Registry**: FastAPI inyecta `get_model_registry()` vía `Depends`. Esta función usa `get_model_adapter()` (cacheado) y retorna el dict `{ModelName → ModelPort}`.
@@ -218,10 +211,10 @@ El router construye `AnalyzeImageUseCase(model_port, storage)` y llama `execute(
 #### Fase 3: Inferencia del modelo (pasos 11–18)
 
 8. El use case llama `await model_port.predict(preprocessed)` — llamada asíncrona.
-9. `SegFormerAdapter.predict()` delega a `loop.run_in_executor()` para ejecutar `_sync_predict()` en el `ThreadPoolExecutor`, liberando el event loop de FastAPI durante la inferencia.
-10. **En el thread**: el `SegformerImageProcessor` normaliza la imagen y crea el tensor `pixel_values`. El modelo produce logits `(1, 23, H/4, W/4)`.
-11. `F.interpolate` bilinear sube los logits a `(1, 23, 512, 512)`.
-12. `softmax` genera probabilidades por clase; `argmax` produce la máscara final `uint8 (512, 512)` con valores 0–22.
+9. `VertebraPromptBoxRefinerAdapter.predict()` delega a `loop.run_in_executor()` para ejecutar `_sync_predict()` en el `ThreadPoolExecutor`, liberando el event loop de FastAPI durante la inferencia.
+10. **En el thread**: resize a 1024×1024 + normalización por percentiles 1/99.5. VertebraPrompt-Net genera heatmap de centros y cajas anatómicas.
+11. BoxRefiner ajusta (dx, dy, dw, dh) sobre cada caja propuesta.
+12. MedSAM ViT-B fine-tuned produce una máscara binaria por caja; las máscaras se componen en máscara multi-clase `uint8 (H, W)`.
 13. Retorna `ModelOutput(mask, probabilities, latency_ms, model_version)`.
 
 #### Fase 4: Post-procesamiento y persistencia (pasos 19–25)
@@ -254,9 +247,9 @@ Cliente → GET /xrays/{study_id}/exports/overlay
 
 ```
 Cliente → GET /health
-        → health_router resuelve get_model_port() → SegFormerAdapter
+        → health_router resuelve get_model_port() → VertebraPromptBoxRefinerAdapter
         → model.is_loaded() → True / False
-        → model.get_model_version() → "nvidia/mit-b2" / "not-loaded"
+        → model.get_model_version() → "vertebraprompt+boxrefiner+medsam-vit-b" / "not-loaded"
         → 200 HealthResponse { status, model_version, model_loaded, uptime_s }
 ```
 

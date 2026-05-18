@@ -253,8 +253,7 @@ services/
 │   │   └── adapters/
 │   │       ├── model/
 │   │       │   ├── vertebraprompt_boxrefiner_adapter.py   # ★ activo: pipeline ganador
-│   │       │   ├── medsam_adapter.py                       # legacy (no usado)
-│   │       │   └── segformer_adapter.py                    # legacy (no usado)
+│   │       │   └── medsam_adapter.py                       # legacy (no usado)
 │   │       ├── registry/
 │   │       │   └── in_memory_model_registry.py             # Catálogo de Model Cards
 │   │       └── storage/
@@ -266,8 +265,7 @@ services/
 │   ├── conftest.py                       # Fixtures compartidas
 │   └── unit/
 │       ├── test_analyze_image_use_case.py
-│       ├── test_vertebrae_router.py
-│       └── test_segformer_adapter.py     # tests del adapter legacy
+│       └── test_vertebrae_router.py
 ├── openapi/
 │   └── vertebraAI.yml                    # Especificación OpenAPI 3.0.3
 ├── requirements.txt
