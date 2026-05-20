@@ -55,7 +55,7 @@ Segmentacion_semantica_columna/
 ├── frontend/                               # Interfaz React (SPA)
 │   ├── app.jsx
 │   ├── styles.css
-│   └── VertebraAI.html
+│   └── index.html
 ├── notebooks/                              # Jupyter notebooks de investigación
 │   ├── medsam_pipeline/                    # Pipeline MedSAM completo
 │   │   ├── checkpoints/                    # Instrucciones para pesos externos
@@ -161,7 +161,7 @@ cd frontend
 npx http-server -p 5500 --cors
 ```
 
-Abrir http://localhost:5500/VertebraAI.html en el navegador. Requiere el backend corriendo en `localhost:8000`.
+Abrir http://localhost:5500/ en el navegador. Requiere el backend corriendo en `localhost:8000`.
 
 > Abrir el archivo directamente como `file://` no funciona porque el navegador bloquea las peticiones fetch a localhost por política de origen cruzado.
 

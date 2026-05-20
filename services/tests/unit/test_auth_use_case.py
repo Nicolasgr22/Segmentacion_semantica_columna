@@ -33,7 +33,7 @@ def mock_auth_port() -> AuthPort:
 
 @pytest.fixture
 def sample_user() -> AuthUser:
-    return AuthUser(email="user@example.com", name="testuser", sub="sub-abc-123")
+    return AuthUser(email="maia_groupo5", name="testuser", sub="sub-abc-123")
 
 
 @pytest.fixture
@@ -55,11 +55,11 @@ async def test_login_returns_auth_session(mock_auth_port, sample_session):
     mock_auth_port.login.return_value = sample_session
 
     use_case = LoginUseCase(auth=mock_auth_port)
-    result = await use_case.execute(email="user@example.com", password="secret")
+    result = await use_case.execute(username="maia_groupo5", password="secret")
 
     assert isinstance(result, AuthSession)
     assert result.id_token == "id.token.jwt"
-    assert result.user.email == "user@example.com"
+    assert result.user.email == "maia_groupo5"
 
 
 @pytest.mark.asyncio
@@ -67,10 +67,10 @@ async def test_login_delegates_to_port(mock_auth_port, sample_session):
     mock_auth_port.login.return_value = sample_session
 
     use_case = LoginUseCase(auth=mock_auth_port)
-    await use_case.execute(email="user@example.com", password="secret")
+    await use_case.execute(username="maia_groupo5", password="secret")
 
     mock_auth_port.login.assert_called_once_with(
-        email="user@example.com", password="secret"
+        username="maia_groupo5", password="secret"
     )
 
 
@@ -80,7 +80,7 @@ async def test_login_propagates_invalid_credentials_error(mock_auth_port):
 
     use_case = LoginUseCase(auth=mock_auth_port)
     with pytest.raises(InvalidCredentialsError):
-        await use_case.execute(email="wrong@example.com", password="wrong")
+        await use_case.execute(username="wrong_user", password="wrong")
 
 
 @pytest.mark.asyncio
@@ -88,7 +88,7 @@ async def test_login_session_contains_refresh_token(mock_auth_port, sample_sessi
     mock_auth_port.login.return_value = sample_session
 
     use_case = LoginUseCase(auth=mock_auth_port)
-    result = await use_case.execute(email="user@example.com", password="secret")
+    result = await use_case.execute(username="maia_groupo5", password="secret")
 
     assert result.refresh_token == "refresh.token.jwt"
 
@@ -104,7 +104,7 @@ async def test_login_session_without_refresh_token(mock_auth_port, sample_user):
     mock_auth_port.login.return_value = session_no_refresh
 
     use_case = LoginUseCase(auth=mock_auth_port)
-    result = await use_case.execute(email="user@example.com", password="secret")
+    result = await use_case.execute(username="maia_groupo5", password="secret")
 
     assert result.refresh_token is None
 
@@ -121,7 +121,7 @@ async def test_validate_token_returns_auth_user(mock_auth_port, sample_user):
     result = await use_case.execute(token="valid.token.jwt")
 
     assert isinstance(result, AuthUser)
-    assert result.email == "user@example.com"
+    assert result.email == "maia_groupo5"
     assert result.sub == "sub-abc-123"
 
 

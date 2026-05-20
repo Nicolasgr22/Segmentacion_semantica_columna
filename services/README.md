@@ -123,14 +123,41 @@ Al arrancar, el servicio carga los **tres adapters activos** en memoria. El prim
 
 ## Endpoints
 
-Todos bajo el prefix `/api/vertebraai`.
+Todos bajo el prefix `/api/vertebraai`. Los endpoints marcados con 🔒 requieren `Authorization: Bearer <token>`.
 
-### `POST /api/vertebraai/xrays`
+### `POST /api/vertebraai/auth/login`
+
+Autentica al usuario contra AWS Cognito. Devuelve el IdToken JWT.
+
+```bash
+curl -X POST http://localhost:8000/api/vertebraai/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "maia_groupo5", "password": "tu-contraseña"}' \
+  | jq '{token: .token, user: .user}'
+```
+
+**Entrada:** JSON `{ username, password }` — acepta nombre de usuario o email alias de Cognito.  
+**Salida:** `{ token, user: { email, name, sub }, token_type }` — usar `token` como Bearer en peticiones siguientes.
+
+---
+
+### `GET /api/vertebraai/auth/me` 🔒
+
+Devuelve los datos del usuario autenticado.
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:8000/api/vertebraai/auth/me
+```
+
+---
+
+### `POST /api/vertebraai/xrays` 🔒
 
 Crea un nuevo análisis de radiografía. Retorna `201 Created`.
 
 ```bash
 curl -X POST http://localhost:8000/api/vertebraai/xrays \
+  -H "Authorization: Bearer <token>" \
   -F "file=@radiografia.png;type=image/png" \
   -F "model=medsam" \
   | jq '{study_id, detected: .metrics.detected_count, confidence: .metrics.global_confidence}'

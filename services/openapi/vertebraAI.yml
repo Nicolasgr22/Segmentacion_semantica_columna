@@ -37,6 +37,8 @@ servers:
     description: Producción (VM institucional)
 
 tags:
+  - name: auth
+    description: Autenticación de usuarios via AWS Cognito
   - name: xrays
     description: Radiografías de columna vertebral y sus análisis de segmentación
   - name: health
@@ -45,6 +47,103 @@ tags:
     description: Catálogo de modelos publicados y sus métricas de experimento
 
 paths:
+  /api/vertebraai/auth/login:
+    post:
+      operationId: login
+      summary: Iniciar sesión
+      description: |
+        Autentica al usuario contra AWS Cognito (USER_PASSWORD_AUTH flow).
+        Acepta nombre de usuario o alias de correo registrado en el User Pool.
+        Retorna el IdToken JWT que debe enviarse en `Authorization: Bearer <token>`
+        en todos los endpoints protegidos.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: "maia_groupo5"
+                  description: Nombre de usuario o correo registrado en Cognito
+                password:
+                  type: string
+                  format: password
+                  example: "••••••••"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Usuario no confirmado en Cognito
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/vertebraai/auth/logout:
+    post:
+      operationId: logout
+      summary: Cerrar sesión
+      description: Revoca el access token en Cognito (global sign-out).
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [access_token]
+              properties:
+                access_token:
+                  type: string
+                  description: Access token retornado por el login (distinto al IdToken)
+      responses:
+        "200":
+          description: Sesión cerrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "ok"
+
+  /api/vertebraai/auth/me:
+    get:
+      operationId: getMe
+      summary: Datos del usuario autenticado
+      description: Retorna los datos del usuario a partir del Bearer token.
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Token inválido o ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/vertebraai/xrays:
     post:
       operationId: createAnalysis
@@ -321,7 +420,43 @@ paths:
                 timestamp: "2026-05-01T14:35:00.000Z"
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: IdToken JWT obtenido en POST /api/vertebraai/auth/login
+
   schemas:
+    LoginResponse:
+      type: object
+      required: [token, user, token_type]
+      properties:
+        token:
+          type: string
+          description: IdToken JWT de Cognito (usar en Authorization header)
+        user:
+          $ref: "#/components/schemas/UserResponse"
+        token_type:
+          type: string
+          example: "Bearer"
+
+    UserResponse:
+      type: object
+      required: [email, name, sub]
+      properties:
+        email:
+          type: string
+          description: Email del usuario en Cognito
+          example: "anferiro@gmail.com"
+        name:
+          type: string
+          description: Nombre de usuario (cognito:username)
+          example: "maia_groupo5"
+        sub:
+          type: string
+          description: Identificador único del usuario (Cognito sub)
+
     ModelName:
       type: string
       enum: [medsam]

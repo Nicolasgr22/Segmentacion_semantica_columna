@@ -41,8 +41,11 @@ El sistema soporta múltiples modelos de segmentación seleccionables en cada re
 | `POST` | `/api/vertebraai/xrays` | Analiza una radiografía y retorna máscara + métricas |
 | `GET` | `/api/vertebraai/health` | Estado del servicio y del modelo activo |
 | `GET` | `/api/vertebraai/models` | Catálogo de modelos disponibles (Model Cards) |
+| `POST` | `/api/vertebraai/auth/login` | Autenticar usuario con username + password → JWT IdToken |
+| `POST` | `/api/vertebraai/auth/logout` | Revocar sesión (global sign-out en Cognito) |
+| `GET` | `/api/vertebraai/auth/me` | Datos del usuario autenticado (requiere Bearer token) |
 | `GET` | `/api/vertebraai/models/{model_id}` | Detalle de un Model Card específico |
-| `GET` | `/api/vertebraai/xrays/{id}/exports/{format}` | Descarga el resultado en `png`, `mask`, `overlay` o `report` |
+| `GET` | `/api/vertebraai/xrays/{id}/exports/{format}` | Descarga el resultado en `png`, `mask`, `overlay` o `report` (requiere Bearer token) |
 
 ### Parámetro de Selección de Modelo
 
@@ -95,6 +98,13 @@ Responsable de la comunicación HTTP: enrutamiento, validación de entrada, rate
 - Construye `AnalyzeImageUseCase` con el adapter y el storage seleccionados.
 - Aplica timeout de inferencia con `asyncio.wait_for()`.
 
+**`auth.py` — Router de autenticación**
+
+- `POST /auth/login`: recibe `{ username, password }` → llama `LoginUseCase` → retorna `{ token, user, token_type }`. Rate limit: 10/min.
+- `POST /auth/logout`: recibe `{ access_token }` → llama `LogoutUseCase` → revoca sesión en Cognito.
+- `GET /auth/me`: valida Bearer token vía `get_current_user` dependency → retorna `UserResponse`.
+- Endpoints públicos (sin autenticación requerida).
+
 **`health.py` — Router de salud**
 
 - `GET /health`: consulta `model.is_loaded()` y `model.get_model_version()`.
@@ -109,6 +119,7 @@ Responsable de la comunicación HTTP: enrutamiento, validación de entrada, rate
 **`schemas/`**
 
 - `ModelName` (enum str): `medsam`, `progressive-unet-binary`, `unetpp-patches` — valida el campo `model` del form.
+- `LoginRequest` / `LoginResponse` / `UserResponse` — schemas de autenticación.
 - `ExportFormat` (enum str): `png`, `mask`, `overlay`, `report`.
 - `AnalyzeResponse`, `HealthResponse`: modelos Pydantic para serialización de respuestas.
 

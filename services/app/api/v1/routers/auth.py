@@ -51,7 +51,7 @@ async def login(
 ) -> LoginResponse:
     use_case = LoginUseCase(auth=auth_port)
     try:
-        session = await use_case.execute(email=body.email, password=body.password)
+        session = await use_case.execute(username=body.username, password=body.password)
     except InvalidCredentialsError:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     except UserNotConfirmedError:

@@ -63,20 +63,20 @@ class CognitoAuthAdapter(AuthPort):
         )
         self._jwks: dict[str, Any] | None = None
 
-    async def login(self, email: str, password: str) -> AuthSession:
+    async def login(self, username: str, password: str) -> AuthSession:
         loop = asyncio.get_event_loop()
         try:
             response = await loop.run_in_executor(
                 None,
                 lambda: self._client.initiate_auth(
                     AuthFlow="USER_PASSWORD_AUTH",
-                    AuthParameters={"USERNAME": email, "PASSWORD": password},
+                    AuthParameters={"USERNAME": username, "PASSWORD": password},
                     ClientId=self._client_id,
                 ),
             )
         except ClientError as exc:
             error_code = exc.response["Error"]["Code"]
-            logger.warning("Cognito login error [%s] for user %s", error_code, email)
+            logger.warning("Cognito login error [%s] for user %s", error_code, username)
             if error_code in _COGNITO_INVALID_CODES:
                 raise InvalidCredentialsError("Credenciales inválidas") from exc
             if error_code == "UserNotConfirmedException":

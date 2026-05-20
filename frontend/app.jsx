@@ -33,6 +33,7 @@ const Icon = ({ name, size = 24, ...props }) => {
     tune: 'M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z',
     error: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8',
     clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
+    logout: 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z',
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -41,8 +42,82 @@ const Icon = ({ name, size = 24, ...props }) => {
   );
 };
 
+// ───────────────────────── Login screen ─────────────────────────
+function LoginView({ onLogin }) {
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!username || !password) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await onLogin(username, password);
+    } catch (err) {
+      setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="login-view">
+      <div className="login-card">
+        <div className="login-brand">
+          <span className="login-logo">VertebraAI</span>
+          <p className="login-subtitle">Sistema de segmentación de columna vertebral</p>
+        </div>
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-field-group">
+            <label className="login-label" htmlFor="login-username">Usuario</label>
+            <input
+              id="login-username"
+              className="login-field"
+              type="text"
+              autoComplete="username"
+              placeholder="usuario o correo"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+          <div className="login-field-group">
+            <label className="login-label" htmlFor="login-password">Contraseña</label>
+            <input
+              id="login-password"
+              className="login-field"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+          {error && <p className="login-error">{error}</p>}
+          <button
+            className="btn-filled login-submit"
+            type="submit"
+            disabled={loading || !username || !password}
+          >
+            {loading ? <span className="login-spinner" /> : 'Ingresar'}
+          </button>
+        </form>
+        <p className="login-footer">
+          Apoyo diagnóstico — Uso exclusivo de personal autorizado
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────── App Bar ─────────────────────────
-function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze, onPickModel, phase }) {
+function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze, onPickModel, phase, onLogout, authToken }) {
   return (
     <header className="appbar">
       <div className="appbar-left">
@@ -83,6 +158,11 @@ function AppBar({ onReset, onToggleTheme, theme, selectedModelName, canReanalyze
         <button className="icon-btn" onClick={onReset} title="Nueva sesión">
           <Icon name="refresh" size={20} />
         </button>
+        {authToken && (
+          <button className="icon-btn appbar-logout-btn" onClick={onLogout} title="Cerrar sesión">
+            <Icon name="logout" size={20} />
+          </button>
+        )}
       </div>
     </header>
   );
@@ -1066,7 +1146,11 @@ const TWEAK_DEFAULS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 function App() {
-  const [phase, setPhase] = useState('upload');     // upload | processing | result | error | compare
+  const [phase, setPhase] = useState(() =>
+    localStorage.getItem('vertebraai-token') ? 'upload' : 'login'
+  );
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('vertebraai-token'));
+  const [authUser, setAuthUser] = useState(null);
   const [filename, setFilename] = useState('');
   const [fileUrl, setFileUrl] = useState(null);     // URL local de la imagen subida
   // Guardamos también el File blob original para poder re-submitirlo a /xrays
@@ -1087,6 +1171,47 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = tweaks.theme;
   }, [tweaks.theme]);
+
+  // Validate stored token on mount; authToken is already initialised from localStorage
+  useEffect(() => {
+    if (!authToken) { setPhase('login'); return; }
+    fetch(`${API_BASE}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    }).then(r => {
+      if (r.ok) return r.json();
+      throw new Error('invalid');
+    }).then(user => {
+      setAuthUser(user);
+    }).catch(() => {
+      localStorage.removeItem('vertebraai-token');
+      setAuthToken(null);
+      setPhase('login');
+    });
+  }, []);
+
+  async function handleLogin(username, password) {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Credenciales inválidas');
+    }
+    const data = await res.json();
+    localStorage.setItem('vertebraai-token', data.token);
+    setAuthToken(data.token);
+    setAuthUser(data.user);
+    setPhase('upload');
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('vertebraai-token');
+    setAuthToken(null);
+    setAuthUser(null);
+    setPhase('login');
+  }
 
   // Catálogo de modelos para las tarjetas seleccionables de la pantalla de upload.
   // Si el backend no expone 'medsam' caemos al primer modelo del catálogo.
@@ -1118,7 +1243,13 @@ function App() {
       formData.append('file', file);
       formData.append('model', modelToUse);
 
-      const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
+      const response = await fetch(`${API_BASE}/xrays`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+        },
+      });
       if (!response.ok) {
         let message = `HTTP ${response.status}`;
         try { const errBody = await response.json(); message = errBody.detail || errBody.error || message; } catch {}
@@ -1152,7 +1283,13 @@ function App() {
     const formData = new FormData();
     formData.append('file', originalFile);
     formData.append('model', modelId);
-    const response = await fetch(`${API_BASE}/xrays`, { method: 'POST', body: formData });
+    const response = await fetch(`${API_BASE}/xrays`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+      },
+    });
     if (!response.ok) {
       let message = `HTTP ${response.status}`;
       try { const errBody = await response.json(); message = errBody.detail || errBody.error || message; } catch {}
@@ -1225,6 +1362,10 @@ function App() {
   const selectedModelName = selectedModel?.display_name || null;
   const canReanalyze = phase === 'result' && !!originalFile;
 
+  if (phase === 'login') {
+    return <LoginView onLogin={handleLogin} />;
+  }
+
   return (
     <div className="app">
       <AppBar
@@ -1235,6 +1376,8 @@ function App() {
         canReanalyze={canReanalyze}
         onPickModel={() => setPickerOpen(true)}
         phase={phase}
+        onLogout={handleLogout}
+        authToken={authToken}
       />
 
       <main className="main">

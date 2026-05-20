@@ -20,8 +20,8 @@ class LoginUseCase:
     def __init__(self, auth: AuthPort) -> None:
         self._auth = auth
 
-    async def execute(self, email: str, password: str) -> AuthSession:
-        return await self._auth.login(email=email, password=password)
+    async def execute(self, username: str, password: str) -> AuthSession:
+        return await self._auth.login(username=username, password=password)
 
 
 class ValidateTokenUseCase:
