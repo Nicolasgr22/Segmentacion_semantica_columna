@@ -8,17 +8,18 @@ from app.core.domain.ports.model_registry_port import ModelRegistryPort
 
 # Métricas reportadas en notebooks/medsam_pipeline/results_summary/comparativo_modelos.md
 # para el modelo ganador `vertebraprompt_boxrefiner` evaluado en test.
+# irnos con la flexible 
 _WINNER_METRICS = [
-    ExperimentMetric(
-        name="dice_strict",
-        value=0.5530,
-        description="Dice con coincidencia anatómica estricta (T1 vs T1, ...)",
-    ),
-    ExperimentMetric(
-        name="iou_strict",
-        value=0.4795,
-        description="IoU con coincidencia anatómica estricta",
-    ),
+    # ExperimentMetric(
+    #     name="dice_strict",
+    #     value=0.5530,
+    #     description="Dice con coincidencia anatómica estricta (T1 vs T1, ...)",
+    # ),
+    # ExperimentMetric(
+    #     name="iou_strict",
+    #     value=0.4795,
+    #     description="IoU con coincidencia anatómica estricta",
+    # ),
     ExperimentMetric(
         name="dice_flexible",
         value=0.7678,

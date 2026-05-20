@@ -5,7 +5,7 @@
 
 Microservicio de análisis automático de radiografías de columna vertebral desarrollado como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** de la Universidad de los Andes.
 
-Expone el **pipeline ganador** del notebook 06 (`VertebraPrompt-Net + BoxRefiner + MedSAM`) detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). Segmenta hasta **22 vértebras** (C3-C7, T1-T12, L1-L5) en radiografías AP en formato PNG.
+Expone tres modelos de segmentación detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). El **pipeline ganador** (`VertebraPrompt-Net + BoxRefiner + MedSAM`, notebook 06) se carga como modelo por defecto (`medsam`). Segmenta hasta **22 vértebras** (C3-C7, T1-T12, L1-L5) en radiografías AP en formato PNG o JPEG.
 
 > **Aviso clínico:** Esta herramienta es un apoyo diagnóstico exclusivamente. Toda decisión clínica debe ser revisada por un radiólogo o especialista cualificado.
 
@@ -14,18 +14,19 @@ Expone el **pipeline ganador** del notebook 06 (`VertebraPrompt-Net + BoxRefiner
 ## Pipeline de inferencia
 
 ```
-Imagen PNG/JPEG (≥32×32 px, cualquier tamaño)
+Imagen PNG o JPEG (≥32×32 px, cualquier tamaño)
        │
        ▼
 ┌──────────────────────────────────────────────────────┐
-│  VertebraPromptBoxRefinerAdapter.predict()           │
+│  Adapter seleccionado (según parámetro `model`)      │
 │  ┌────────────────────────────────────────────────┐  │
-│  │ Resize a 1024×1024 + normalización percentil   │  │
-│  │ (idéntico al notebook 06: BILINEAR + 1/99.5)   │  │
+│  │ Preprocesamiento propio del adapter            │  │
+│  │ (p.ej. resize 1024×1024 + norm percentil       │  │
+│  │  para medsam; ventana deslizante para          │  │
+│  │  unetpp-patches; band-split para               │  │
+│  │  progressive-unet-binary)                      │  │
 │  ├────────────────────────────────────────────────┤  │
-│  │ 1. VertebraPrompt-Net  (heatmap+cajas)         │  │
-│  │ 2. BoxRefiner          (ajusta cajas)          │  │
-│  │ 3. MedSAM por caja     (máscaras)              │  │
+│  │ Inferencia del modelo                          │  │
 │  └────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────┘
        │
@@ -33,7 +34,7 @@ Imagen PNG/JPEG (≥32×32 px, cualquier tamaño)
 [ Composición multi-clase + métricas + máscara coloreada ]
 ```
 
-Resultados objetivo (test, según `notebooks/medsam_pipeline/results_summary/`):
+Resultados objetivo del modelo ganador (test, según `notebooks/medsam_pipeline/results_summary/`):
 - Dice estricto: **0.5530** | Dice flexible: **0.7678**
 
 ---
@@ -72,15 +73,19 @@ cp .env.example .env
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
 | `MODEL_DEVICE` | Dispositivo de inferencia: `cpu`, `cuda`, `mps` | `cpu` |
-| `MODEL_INPUT_SIZE` | Resolución de entrada (lado del letterbox) | `512` |
+| `MODEL_INPUT_SIZE` | Resolución de entrada interna | `512` |
 | `MEDSAM_PROMPT_NET_CHECKPOINT` | Checkpoint de VertebraPrompt-Net | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` |
 | `MEDSAM_BOX_REFINER_CHECKPOINT` | Checkpoint de BoxRefiner | `model-pkg/medsam/box_refiner_best.pt` |
-| `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/sam_vit_b_01ec64.pth` |
+| `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/medsam/medsam_vit_b.pth` |
 | `MEDSAM_FINETUNED_CHECKPOINT` | Checkpoint MedSAM fine-tuned (decoder + encoder parcial) | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` |
+| `PROGRESSIVE_UNET_CHECKPOINT` | Checkpoint del modelo UNet progresivo binario (Experimento B) | `model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth` |
+| `UNETPP_PATCHES_CHECKPOINT` | Checkpoint del modelo UNet++ con ventana deslizante | `model-pkg/unet++_patches/unet++_patches.pth` |
 | `MAX_UPLOAD_MB` | Tamaño máximo de imagen aceptada (MB) | `50` |
 | `INFERENCE_TIMEOUT_S` | Timeout de inferencia (segundos) | `60` |
-| `CORS_ORIGINS` | Orígenes permitidos (lista JSON) | `["http://localhost:3000","http://localhost:5500","http://127.0.0.1:5500"]` |
-| `DEBUG` | Modo debug de FastAPI | `false` |
+| `CORS_ORIGINS` | Orígenes permitidos (lista JSON) | `["*"]` |
+| `RATE_LIMIT_DEFAULT` | Límite de tasa para endpoints generales | `120/minute` |
+| `RATE_LIMIT_ANALYZE` | Límite de tasa para el endpoint de análisis | `5/minute` |
+| `DEBUG` | Activa Swagger UI / ReDoc y modo debug de FastAPI | `false` |
 | `PORT` | Puerto del servidor | `8000` |
 
 ---
@@ -101,16 +106,18 @@ docker build -t vertebraai .
 
 # Ejecutar con checkpoints montados
 docker run -p 8000:8000 \
-  -v /Users/anferiro/personal/maia/proyecto/Segmentacion_semantica_columna/services/model-pkg:/app/model-pkg:ro \
-  -e MEDSAM_PROMPT_NET_CHECKPOINT=/opt/models/vertebraprompt_net_auxiliar_best.pt \
-  -e MEDSAM_BOX_REFINER_CHECKPOINT=/opt/models/box_refiner_best.pt \
-  -e MEDSAM_SAM_CHECKPOINT=/opt/models/sam_vit_b_01ec64.pth \
-  -e MEDSAM_FINETUNED_CHECKPOINT=/opt/models/medsam_decoder_encoder_parcial.pt \
+  -v /path/to/model-pkg:/app/model-pkg:ro \
+  -e MEDSAM_PROMPT_NET_CHECKPOINT=model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt \
+  -e MEDSAM_BOX_REFINER_CHECKPOINT=model-pkg/medsam/box_refiner_best.pt \
+  -e MEDSAM_SAM_CHECKPOINT=model-pkg/medsam/medsam_vit_b.pth \
+  -e MEDSAM_FINETUNED_CHECKPOINT=model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt \
+  -e PROGRESSIVE_UNET_CHECKPOINT=model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth \
+  -e UNETPP_PATCHES_CHECKPOINT=model-pkg/unet++_patches/unet++_patches.pth \
   -e MODEL_DEVICE=cpu \
   vertebraai
 ```
 
-Al arrancar, el servicio carga las **4 redes** en memoria (~2 GB total). El primer arranque puede tardar 60–120 segundos.
+Al arrancar, el servicio carga los **tres adapters activos** en memoria. El primer arranque puede tardar 60–120 segundos dependiendo del hardware.
 
 ---
 
@@ -130,8 +137,14 @@ curl -X POST http://localhost:8000/api/vertebraai/xrays \
 ```
 
 **Entrada:** `multipart/form-data`
-- `file`: PNG o JPEG, mínimo 32×32 px (cualquier tamaño es aceptado; el adapter reescala internamente al tamaño que necesita el modelo)
-- `model` (opcional): `medsam` (por defecto). Otros modelos pueden registrarse en `dependencies.py` siguiendo el patrón dispatch.
+- `file`: PNG o JPEG, mínimo 32×32 px (cualquier tamaño es aceptado; cada adapter aplica su propio preprocesamiento internamente)
+- `model` (opcional): nombre del modelo a utilizar. Valores disponibles:
+
+| Valor | Modelo | Notas |
+|-------|--------|-------|
+| `medsam` _(por defecto)_ | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned | Pipeline ganador notebook 06 |
+| `progressive-unet-binary` | Experimento B UNet paper-like, binario con band-split vertical T1–L5 | — |
+| `unetpp-patches` | UNet++ encoder efficientnet-b7, ventana deslizante 128×128 | Dice test 0.4711 |
 
 **Salida:** JSON con `study_id`, máscara coloreada en base64, métricas y lista de 22 vértebras (C3-C7 + T1-T12 + L1-L5).
 
@@ -192,7 +205,7 @@ curl "http://localhost:8000/api/vertebraai/xrays/550e8400-e29b-41d4-a716-4466554
 
 ## Documentación interactiva
 
-Con el servicio corriendo:
+La documentación interactiva solo está disponible cuando el servicio se ejecuta con `DEBUG=true`:
 
 - **Swagger UI:** http://localhost:8000/api/docs
 - **ReDoc:** http://localhost:8000/api/redoc
@@ -220,6 +233,17 @@ pytest tests/unit/test_analyze_image_use_case.py -v
 
 Las pruebas se ejecutan **sin GPU ni checkpoints reales**: todos los puertos externos están mockeados con `unittest.mock` (ver `tests/conftest.py`).
 
+Archivos de prueba disponibles:
+
+| Archivo | Descripción |
+|---------|-------------|
+| `tests/unit/test_analyze_image_use_case.py` | Use case de análisis |
+| `tests/unit/test_vertebrae_router.py` | Router principal |
+| `tests/unit/test_vertebraprompt_adapter.py` | Adapter VertebraPromptBoxRefiner (ganador) |
+| `tests/unit/test_progressive_unet_adapter.py` | Adapter UNet progresivo binario |
+| `tests/unit/test_unetpp_patches_adapter.py` | Adapter UNet++ con patches |
+| `tests/unit/test_segformer_adapter.py` | Adapter Segformer (legacy, no usado en producción) |
+
 ---
 
 ## Estructura del proyecto
@@ -241,33 +265,46 @@ services/
 │   │   ├── domain/
 │   │   │   ├── entities/
 │   │   │   │   ├── vertebra.py           # Vertebra, VertebralRegion, build_vertebrae_from_mask
-│   │   │   │   └── analysis.py           # VertebraAnalysis, AnalysisMetrics, VertebralMask
+│   │   │   │   ├── analysis.py           # VertebraAnalysis, AnalysisMetrics, VertebralMask
+│   │   │   │   └── model_card.py         # ModelCard
 │   │   │   └── ports/
 │   │   │       ├── model_port.py         # ABC ModelPort, ModelOutput
 │   │   │       ├── model_registry_port.py
 │   │   │       └── storage_port.py       # ABC StoragePort
 │   │   └── use_cases/
-│   │       ├── analyze_image.py          # Orquesta validación → preprocesar → predict → postprocesar
+│   │       ├── analyze_image.py          # Orquesta validación → predict → postprocesar
 │   │       └── export_result.py          # Lectura desde storage + serialización por formato
 │   ├── infrastructure/
 │   │   └── adapters/
 │   │       ├── model/
-│   │       │   ├── vertebraprompt_boxrefiner_adapter.py   # ★ activo: pipeline ganador
-│   │       │   └── medsam_adapter.py                       # legacy (no usado)
+│   │       │   ├── vertebraprompt_boxrefiner_adapter.py   # ★ activo: pipeline ganador (medsam)
+│   │       │   ├── progressive_unet_adapter.py            # activo: progressive-unet-binary
+│   │       │   ├── unetpp_patches_adapter.py              # activo: unetpp-patches
+│   │       │   ├── medsam_adapter.py                      # legacy (no usado)
+│   │       │   └── segformer_adapter.py                   # legacy (no usado)
 │   │       ├── registry/
-│   │       │   └── in_memory_model_registry.py             # Catálogo de Model Cards
+│   │       │   └── in_memory_model_registry.py            # Catálogo de Model Cards
 │   │       └── storage/
-│   │           └── in_memory_adapter.py                    # OrderedDict LRU (max=100)
+│   │           └── in_memory_adapter.py                   # OrderedDict LRU (max=100)
 │   ├── config.py                         # Settings con pydantic-settings
 │   ├── dependencies.py                   # Inyección de dependencias (lru_cache + dispatch dict)
-│   └── main.py                           # FastAPI app + lifespan + CORS
+│   ├── main.py                           # FastAPI app + lifespan + CORS + rate limiting
+│   └── rate_limit.py                     # SlowAPI limiter (120/min global, 5/min analyze)
+├── scripts/
+│   └── generate_template_bbox.py
 ├── tests/
 │   ├── conftest.py                       # Fixtures compartidas
 │   └── unit/
 │       ├── test_analyze_image_use_case.py
-│       └── test_vertebrae_router.py
+│       ├── test_progressive_unet_adapter.py
+│       ├── test_segformer_adapter.py
+│       ├── test_unetpp_patches_adapter.py
+│       ├── test_vertebrae_router.py
+│       └── test_vertebraprompt_adapter.py
 ├── openapi/
 │   └── vertebraAI.yml                    # Especificación OpenAPI 3.0.3
+├── docs/
+│   └── ARCHITECTURE.md                   # Documentación técnica de arquitectura
 ├── requirements.txt
 ├── Dockerfile
 ├── .env.example
@@ -279,19 +316,22 @@ services/
 ## Decisiones de diseño
 
 **Arquitectura hexagonal (Ports & Adapters)**
-El use case `AnalyzeImageUseCase` solo conoce el contrato `ModelPort` (interface). El adapter concreto `VertebraPromptBoxRefinerAdapter` se inyecta en `dependencies.py`. Esto permite cambiar de modelo sin tocar el use case y testear sin cargar el modelo real.
+El use case `AnalyzeImageUseCase` solo conoce el contrato `ModelPort` (interface). Los adapters concretos se inyectan en `dependencies.py`. Esto permite cambiar de modelo sin tocar el use case y testear sin cargar el modelo real.
 
 **Dispatch pattern para multi-modelo**
 El endpoint `POST /xrays` acepta un parámetro `model` (form). En `dependencies.py`, la función `get_model_dispatch()` retorna un `dict[ModelName, ModelPort]` que mapea cada nombre a su adapter. Para añadir un modelo nuevo: registrar el enum, cargar el adapter, mapearlo en el dict. El router queda cerrado a modificación.
 
 **Preprocesamiento dentro del adapter (no en el use case)**
-El use case solo valida el formato y entrega la imagen RGB cruda al adapter. El adapter aplica el preprocesamiento exacto del notebook 06 (resize a 1024×1024 con BILINEAR + normalización por percentiles 1/99.5), evitando la divergencia que existía cuando el use case aplicaba CLAHE+letterbox que el modelo nunca vio en training.
+El use case solo valida el formato (PNG o JPEG) y la resolución mínima (32×32 px), y entrega la imagen RGB cruda al adapter. Cada adapter aplica el preprocesamiento exacto que su modelo requiere, evitando divergencias entre el entrenamiento y la inferencia en producción.
 
-**`run_in_executor` en el adapter**
+**Rate limiting con SlowAPI**
+El endpoint de análisis está limitado a 5 requests/minuto por IP para evitar saturación durante la inferencia. Los endpoints de consulta tienen un límite por defecto de 120 requests/minuto. La configuración se controla con `RATE_LIMIT_DEFAULT` y `RATE_LIMIT_ANALYZE`.
+
+**`run_in_executor` en los adapters**
 PyTorch en CPU bloquea varios segundos durante la inferencia. Sin `run_in_executor`, el event loop de uvicorn no puede responder otros requests (`/health`, `/export`) durante ese tiempo.
 
 **`@lru_cache` en las dependencias**
-Garantiza que las 4 redes (~2 GB en memoria) se carguen una sola vez al primer request, independientemente de cuántos requests simultáneos lleguen.
+Garantiza que los tres adapters activos se carguen una sola vez al primer request, independientemente de cuántos requests simultáneos lleguen.
 
 **`InMemoryStorageAdapter` con límite de 100 entradas**
 Para MVP sin base de datos. El límite previene memory leaks. Migrar a Redis o S3 solo requiere implementar un nuevo adapter que cumpla `StoragePort`.
