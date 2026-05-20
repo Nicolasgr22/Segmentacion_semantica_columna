@@ -1,14 +1,14 @@
 # ── Cognito User Pool ────────────────────────────────────────────────────────
 #
-# Pool existente: us-east-1_xdT7n8901 (vertebraai-users)
-# Creado manualmente via CLI. Para importar al state de Terraform:
-#   terraform import aws_cognito_user_pool.vertebraai us-east-1_xdT7n8901
-#   terraform import aws_cognito_user_pool_client.vertebraai_web us-east-1_xdT7n8901/33an9jq8fegpjp2v1iafcpc7av
+# Pool existente: us-east-1_M9mJH2Qim (vertebraai-users)
+# Para importar al state de Terraform:
+#   terraform import aws_cognito_user_pool.vertebraai us-east-1_M9mJH2Qim
+#   terraform import aws_cognito_user_pool_client.vertebraai_web us-east-1_M9mJH2Qim/5am1u0928s7p69vor1rbpt4qg7
 
 resource "aws_cognito_user_pool" "vertebraai" {
   name = "vertebraai-users"
 
-  # alias_attributes permite login con username (ej: maia_groupo5) O email.
+  # alias_attributes permite login con username (ej: maia_grupo5) O email.
   # Diferente a username_attributes donde el email ES el username.
   alias_attributes         = ["email"]
   auto_verified_attributes = ["email"]
@@ -66,8 +66,8 @@ resource "aws_cognito_user_pool_client" "vertebraai_web" {
 }
 
 # ── Usuario administrador inicial ────────────────────────────────────────────
-# Usuario creado: maia_groupo5 / anferiro@gmail.com (CONFIRMED, contraseña permanente)
-# Para importar: terraform import aws_cognito_user.admin us-east-1_xdT7n8901/maia_groupo5
+# Usuario creado: maia_grupo5 / anferiro@gmail.com (CONFIRMED, contraseña permanente)
+# Para importar: terraform import aws_cognito_user.admin us-east-1_M9mJH2Qim/maia_grupo5
 
 resource "aws_cognito_user" "admin" {
   user_pool_id = aws_cognito_user_pool.vertebraai.id

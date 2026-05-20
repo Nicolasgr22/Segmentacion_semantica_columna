@@ -53,6 +53,10 @@ if docker pull "${ecr_image}:latest"; then
     -p ${host_port}:8000 \
     -e PORT=8000 \
     -e CORS_ORIGINS='${cors_origins_json}' \
+    -e AUTH_ENABLED=true \
+    -e COGNITO_USER_POOL_ID='${cognito_user_pool_id}' \
+    -e COGNITO_CLIENT_ID='${cognito_client_id}' \
+    -e COGNITO_REGION='${cognito_region}' \
     "${ecr_image}:latest"
 else
   echo "Imagen aún no publicada en ECR. Subila con scripts/deploy_ecr.sh y reinicia la instancia." >&2

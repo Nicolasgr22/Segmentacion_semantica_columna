@@ -266,10 +266,13 @@ resource "aws_instance" "svc" {
   associate_public_ip_address = true
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh.tpl", {
-    ecr_registry      = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
-    ecr_image         = aws_ecr_repository.svc.repository_url
-    host_port         = var.host_port
-    cors_origins_json = jsonencode(var.cors_origins)
+    ecr_registry          = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+    ecr_image             = aws_ecr_repository.svc.repository_url
+    host_port             = var.host_port
+    cors_origins_json     = jsonencode(var.cors_origins)
+    cognito_user_pool_id  = aws_cognito_user_pool.vertebraai.id
+    cognito_client_id     = aws_cognito_user_pool_client.vertebraai_web.id
+    cognito_region        = var.aws_region
     # Cuando cambia el hash de fuentes, cambia el user_data → forza recreación
     # de la EC2 para que haga pull de la imagen recién publicada.
     image_hash = local.service_source_hash

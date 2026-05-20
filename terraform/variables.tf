@@ -45,7 +45,7 @@ variable "project_name" {
 variable "cognito_admin_username" {
   description = "Nombre de usuario del administrador inicial en Cognito"
   type        = string
-  default     = "maia_groupo5"
+  default     = "maia_grupo5"
 }
 
 variable "cognito_admin_email" {
