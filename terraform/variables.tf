@@ -59,3 +59,18 @@ variable "cors_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+# ── Cognito ──────────────────────────────────────────────────────────────────
+
+variable "cognito_admin_email" {
+  description = "Email del usuario administrador inicial de Cognito"
+  type        = string
+  default     = "admin@vertebraai.local"
+}
+
+variable "cognito_admin_temp_password" {
+  description = "Contraseña temporal del administrador (debe cambiarse en el primer login)"
+  type        = string
+  default     = "VertebraAI2026!"
+  sensitive   = true
+}
