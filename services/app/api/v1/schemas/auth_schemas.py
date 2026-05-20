@@ -20,3 +20,13 @@ class LoginResponse(BaseModel):
 
 class LogoutRequest(BaseModel):
     access_token: str  # Cognito access token for global sign-out
+
+
+class ForgotPasswordRequest(BaseModel):
+    username: str  # nombre de usuario o email alias registrado en Cognito
+
+
+class ConfirmPasswordRequest(BaseModel):
+    username: str
+    otp_code: str   # código de 6 dígitos enviado al email por Cognito
+    new_password: str

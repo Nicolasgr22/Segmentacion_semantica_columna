@@ -44,23 +44,75 @@ const Icon = ({ name, size = 24, ...props }) => {
 
 // ───────────────────────── Login screen ─────────────────────────
 function LoginView({ onLogin }) {
+  // step: 'login' | 'forgot-request' | 'forgot-confirm'
+  const [step, setStep] = React.useState('login');
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [otpCode, setOtpCode] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [info, setInfo] = React.useState(null);
 
-  async function handleSubmit(e) {
+  function resetToLogin() {
+    setStep('login');
+    setError(null);
+    setInfo(null);
+    setOtpCode('');
+    setNewPassword('');
+  }
+
+  async function handleLogin(e) {
     e.preventDefault();
     if (!username || !password) return;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       await onLogin(username, password);
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  }
+
+  async function handleForgotRequest(e) {
+    e.preventDefault();
+    if (!username) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'No se pudo enviar el código');
+      }
+      setInfo('Código OTP enviado al correo registrado. Revisa tu bandeja.');
+      setStep('forgot-confirm');
+    } catch (err) {
+      setError(err.message);
+    } finally { setLoading(false); }
+  }
+
+  async function handleForgotConfirm(e) {
+    e.preventDefault();
+    if (!otpCode || !newPassword) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/confirm-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, otp_code: otpCode, new_password: newPassword }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Código incorrecto o expirado');
+      }
+      setInfo('Contraseña actualizada. Ya puedes iniciar sesión.');
+      resetToLogin();
+    } catch (err) {
+      setError(err.message);
+    } finally { setLoading(false); }
   }
 
   return (
@@ -70,47 +122,92 @@ function LoginView({ onLogin }) {
           <span className="login-logo">VertebraAI</span>
           <p className="login-subtitle">Sistema de segmentación de columna vertebral</p>
         </div>
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="login-field-group">
-            <label className="login-label" htmlFor="login-username">Usuario</label>
-            <input
-              id="login-username"
-              className="login-field"
-              type="text"
-              autoComplete="username"
-              placeholder="usuario o correo"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              disabled={loading}
-              required
-            />
-          </div>
-          <div className="login-field-group">
-            <label className="login-label" htmlFor="login-password">Contraseña</label>
-            <input
-              id="login-password"
-              className="login-field"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              disabled={loading}
-              required
-            />
-          </div>
-          {error && <p className="login-error">{error}</p>}
-          <button
-            className="btn-filled login-submit"
-            type="submit"
-            disabled={loading || !username || !password}
-          >
-            {loading ? <span className="login-spinner" /> : 'Ingresar'}
-          </button>
-        </form>
-        <p className="login-footer">
-          Apoyo diagnóstico — Uso exclusivo de personal autorizado
-        </p>
+
+        {/* ── Paso 1: login ── */}
+        {step === 'login' && (
+          <form className="login-form" onSubmit={handleLogin}>
+            <div className="login-field-group">
+              <label className="login-label" htmlFor="login-username">Usuario</label>
+              <input id="login-username" className="login-field" type="text"
+                autoComplete="username" placeholder="usuario o correo"
+                value={username} onChange={e => setUsername(e.target.value)}
+                disabled={loading} required />
+            </div>
+            <div className="login-field-group">
+              <label className="login-label" htmlFor="login-password">Contraseña</label>
+              <input id="login-password" className="login-field" type="password"
+                autoComplete="current-password" placeholder="••••••••"
+                value={password} onChange={e => setPassword(e.target.value)}
+                disabled={loading} required />
+            </div>
+            {info && <p className="login-info">{info}</p>}
+            {error && <p className="login-error">{error}</p>}
+            <button className="btn-filled login-submit" type="submit"
+              disabled={loading || !username || !password}>
+              {loading ? <span className="login-spinner" /> : 'Ingresar'}
+            </button>
+            <button type="button" className="login-forgot-link"
+              onClick={() => { setError(null); setInfo(null); setStep('forgot-request'); }}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          </form>
+        )}
+
+        {/* ── Paso 2: solicitar OTP ── */}
+        {step === 'forgot-request' && (
+          <form className="login-form" onSubmit={handleForgotRequest}>
+            <p className="login-step-title">Recuperar contraseña</p>
+            <p className="login-step-desc">Ingresa tu usuario y te enviaremos un código OTP al correo registrado.</p>
+            <div className="login-field-group">
+              <label className="login-label" htmlFor="forgot-username">Usuario</label>
+              <input id="forgot-username" className="login-field" type="text"
+                autoComplete="username" placeholder="usuario o correo"
+                value={username} onChange={e => setUsername(e.target.value)}
+                disabled={loading} required />
+            </div>
+            {error && <p className="login-error">{error}</p>}
+            <button className="btn-filled login-submit" type="submit"
+              disabled={loading || !username}>
+              {loading ? <span className="login-spinner" /> : 'Enviar código OTP'}
+            </button>
+            <button type="button" className="login-forgot-link" onClick={resetToLogin}>
+              ← Volver al inicio de sesión
+            </button>
+          </form>
+        )}
+
+        {/* ── Paso 3: confirmar OTP + nueva contraseña ── */}
+        {step === 'forgot-confirm' && (
+          <form className="login-form" onSubmit={handleForgotConfirm}>
+            <p className="login-step-title">Establecer nueva contraseña</p>
+            {info && <p className="login-info">{info}</p>}
+            <div className="login-field-group">
+              <label className="login-label" htmlFor="otp-code">Código OTP</label>
+              <input id="otp-code" className="login-field" type="text"
+                inputMode="numeric" maxLength={6} placeholder="123456"
+                value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                disabled={loading} required />
+            </div>
+            <div className="login-field-group">
+              <label className="login-label" htmlFor="new-password">Nueva contraseña</label>
+              <input id="new-password" className="login-field" type="password"
+                autoComplete="new-password" placeholder="••••••••"
+                value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                disabled={loading} required />
+            </div>
+            {error && <p className="login-error">{error}</p>}
+            <button className="btn-filled login-submit" type="submit"
+              disabled={loading || !otpCode || !newPassword}>
+              {loading ? <span className="login-spinner" /> : 'Confirmar nueva contraseña'}
+            </button>
+            <button type="button" className="login-forgot-link"
+              onClick={() => setStep('forgot-request')}>
+              ← Reenviar código
+            </button>
+          </form>
+        )}
+
+        <p className="login-footer">Apoyo diagnóstico — Uso exclusivo de personal autorizado</p>
       </div>
     </div>
   );

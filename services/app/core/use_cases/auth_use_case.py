@@ -38,3 +38,25 @@ class LogoutUseCase:
 
     async def execute(self, access_token: str) -> None:
         await self._auth.logout(access_token=access_token)
+
+
+class OtpCodeError(ValueError):
+    pass
+
+
+class ForgotPasswordUseCase:
+    def __init__(self, auth: AuthPort) -> None:
+        self._auth = auth
+
+    async def execute(self, username: str) -> None:
+        await self._auth.forgot_password(username=username)
+
+
+class ConfirmPasswordUseCase:
+    def __init__(self, auth: AuthPort) -> None:
+        self._auth = auth
+
+    async def execute(self, username: str, otp_code: str, new_password: str) -> None:
+        await self._auth.confirm_password(
+            username=username, otp_code=otp_code, new_password=new_password
+        )

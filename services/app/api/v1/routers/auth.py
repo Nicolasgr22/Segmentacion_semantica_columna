@@ -13,6 +13,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.v1.schemas.auth_schemas import (
+    ConfirmPasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     LoginResponse,
     LogoutRequest,
@@ -21,9 +23,12 @@ from app.api.v1.schemas.auth_schemas import (
 from app.config import settings
 from app.core.domain.entities.user import AuthUser
 from app.core.use_cases.auth_use_case import (
+    ConfirmPasswordUseCase,
+    ForgotPasswordUseCase,
     InvalidCredentialsError,
     LoginUseCase,
     LogoutUseCase,
+    OtpCodeError,
     UserNotConfirmedError,
 )
 from app.dependencies import get_auth_port, get_current_user
@@ -84,6 +89,62 @@ async def logout(
 ) -> dict[str, str]:
     await LogoutUseCase(auth=auth_port).execute(access_token=body.access_token)
     return {"message": "ok"}
+
+
+@router.post(
+    "/forgot-password",
+    summary="Solicitar código OTP para recuperar contraseña",
+    description="Envía un código OTP de 6 dígitos al email registrado en Cognito.",
+    responses={
+        200: {"description": "OTP enviado — revisar el correo registrado"},
+        404: {"description": "Usuario no encontrado"},
+    },
+)
+@limiter.limit("5/minute")
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    auth_port=Depends(get_auth_port),
+) -> dict[str, str]:
+    try:
+        await ForgotPasswordUseCase(auth=auth_port).execute(username=body.username)
+    except InvalidCredentialsError:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    except Exception:
+        logger.exception("Error inesperado en forgot-password")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+    return {"message": "Código OTP enviado al correo registrado"}
+
+
+@router.post(
+    "/confirm-password",
+    summary="Confirmar OTP y establecer nueva contraseña",
+    responses={
+        200: {"description": "Contraseña actualizada — ya puedes iniciar sesión"},
+        400: {"description": "Código OTP incorrecto o expirado"},
+        404: {"description": "Usuario no encontrado"},
+    },
+)
+@limiter.limit("10/minute")
+async def confirm_password(
+    request: Request,
+    body: ConfirmPasswordRequest,
+    auth_port=Depends(get_auth_port),
+) -> dict[str, str]:
+    try:
+        await ConfirmPasswordUseCase(auth=auth_port).execute(
+            username=body.username,
+            otp_code=body.otp_code,
+            new_password=body.new_password,
+        )
+    except OtpCodeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except InvalidCredentialsError:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    except Exception:
+        logger.exception("Error inesperado en confirm-password")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+    return {"message": "Contraseña actualizada correctamente"}
 
 
 @router.get(

@@ -126,6 +126,49 @@ class CognitoAuthAdapter(AuthPort):
         except ClientError:
             logger.warning("global_sign_out failed — token may already be expired")
 
+    async def forgot_password(self, username: str) -> None:
+        loop = asyncio.get_event_loop()
+        try:
+            await loop.run_in_executor(
+                None,
+                lambda: self._client.forgot_password(
+                    ClientId=self._client_id,
+                    Username=username,
+                ),
+            )
+        except ClientError as exc:
+            error_code = exc.response["Error"]["Code"]
+            logger.warning("forgot_password error [%s] for user %s", error_code, username)
+            if error_code in _COGNITO_INVALID_CODES:
+                raise InvalidCredentialsError("Usuario no encontrado") from exc
+            raise
+
+    async def confirm_password(self, username: str, otp_code: str, new_password: str) -> None:
+        from app.core.use_cases.auth_use_case import OtpCodeError
+        loop = asyncio.get_event_loop()
+        try:
+            await loop.run_in_executor(
+                None,
+                lambda: self._client.confirm_forgot_password(
+                    ClientId=self._client_id,
+                    Username=username,
+                    ConfirmationCode=otp_code,
+                    Password=new_password,
+                ),
+            )
+        except ClientError as exc:
+            error_code = exc.response["Error"]["Code"]
+            logger.warning(
+                "confirm_forgot_password error [%s] for user %s", error_code, username
+            )
+            if error_code == "CodeMismatchException":
+                raise OtpCodeError("Código OTP incorrecto") from exc
+            if error_code == "ExpiredCodeException":
+                raise OtpCodeError("El código OTP ha expirado") from exc
+            if error_code in _COGNITO_INVALID_CODES:
+                raise InvalidCredentialsError("Usuario no encontrado") from exc
+            raise
+
     async def _get_jwks(self) -> dict[str, Any]:
         if self._jwks is not None:
             return self._jwks

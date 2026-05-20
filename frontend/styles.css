@@ -2012,6 +2012,45 @@ body::after {
   margin: 0;
 }
 
+.login-forgot-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: center;
+  width: 100%;
+  transition: opacity 150ms;
+}
+
+.login-forgot-link:hover {
+  opacity: 0.75;
+}
+
+.login-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surf);
+  margin: 0 0 4px;
+}
+
+.login-step-desc {
+  font-size: 12px;
+  color: var(--on-surf-var);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.login-info {
+  font-size: 13px;
+  color: var(--tertiary);
+  background: rgba(0, 229, 160, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
 /* Logout button in AppBar */
 .appbar-logout-btn {
   font-size: 12px;
