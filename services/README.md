@@ -23,8 +23,7 @@ Imagen PNG o JPEG (≥32×32 px, cualquier tamaño)
 │  │ Preprocesamiento propio del adapter            │  │
 │  │ (p.ej. resize 1024×1024 + norm percentil       │  │
 │  │  para medsam; ventana deslizante para          │  │
-│  │  unetpp-patches; band-split para               │  │
-│  │  progressive-unet-binary)                      │  │
+│  │  unetpp-patches)                               │  │
 │  ├────────────────────────────────────────────────┤  │
 │  │ Inferencia del modelo                          │  │
 │  └────────────────────────────────────────────────┘  │
@@ -78,7 +77,6 @@ cp .env.example .env
 | `MEDSAM_BOX_REFINER_CHECKPOINT` | Checkpoint de BoxRefiner | `model-pkg/medsam/box_refiner_best.pt` |
 | `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/medsam/medsam_vit_b.pth` |
 | `MEDSAM_FINETUNED_CHECKPOINT` | Checkpoint MedSAM fine-tuned (decoder + encoder parcial) | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` |
-| `PROGRESSIVE_UNET_CHECKPOINT` | Checkpoint del modelo UNet progresivo binario (Experimento B) | `model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth` |
 | `UNETPP_PATCHES_CHECKPOINT` | Checkpoint del modelo UNet++ con ventana deslizante | `model-pkg/unet++_patches/unet++_patches.pth` |
 | `MAX_UPLOAD_MB` | Tamaño máximo de imagen aceptada (MB) | `50` |
 | `INFERENCE_TIMEOUT_S` | Timeout de inferencia (segundos) | `60` |
@@ -111,13 +109,12 @@ docker run -p 8000:8000 \
   -e MEDSAM_BOX_REFINER_CHECKPOINT=model-pkg/medsam/box_refiner_best.pt \
   -e MEDSAM_SAM_CHECKPOINT=model-pkg/medsam/medsam_vit_b.pth \
   -e MEDSAM_FINETUNED_CHECKPOINT=model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt \
-  -e PROGRESSIVE_UNET_CHECKPOINT=model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth \
   -e UNETPP_PATCHES_CHECKPOINT=model-pkg/unet++_patches/unet++_patches.pth \
   -e MODEL_DEVICE=cpu \
   vertebraai
 ```
 
-Al arrancar, el servicio carga los **tres adapters activos** en memoria. El primer arranque puede tardar 60–120 segundos dependiendo del hardware.
+Al arrancar, el servicio carga los **dos adapters activos** en memoria. El primer arranque puede tardar 60–120 segundos dependiendo del hardware.
 
 ---
 
@@ -170,7 +167,6 @@ curl -X POST http://localhost:8000/api/vertebraai/xrays \
 | Valor | Modelo | Notas |
 |-------|--------|-------|
 | `medsam` _(por defecto)_ | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned | Pipeline ganador notebook 06 |
-| `progressive-unet-binary` | Experimento B UNet paper-like, binario con band-split vertical T1–L5 | — |
 | `unetpp-patches` | UNet++ encoder efficientnet-b7, ventana deslizante 128×128 | Dice test 0.4711 |
 
 **Salida:** JSON con `study_id`, máscara coloreada en base64, métricas y lista de 22 vértebras (C3-C7 + T1-T12 + L1-L5).
@@ -267,7 +263,6 @@ Archivos de prueba disponibles:
 | `tests/unit/test_analyze_image_use_case.py` | Use case de análisis |
 | `tests/unit/test_vertebrae_router.py` | Router principal |
 | `tests/unit/test_vertebraprompt_adapter.py` | Adapter VertebraPromptBoxRefiner (ganador) |
-| `tests/unit/test_progressive_unet_adapter.py` | Adapter UNet progresivo binario |
 | `tests/unit/test_unetpp_patches_adapter.py` | Adapter UNet++ con patches |
 | `tests/unit/test_segformer_adapter.py` | Adapter Segformer (legacy, no usado en producción) |
 
@@ -305,7 +300,6 @@ services/
 │   │   └── adapters/
 │   │       ├── model/
 │   │       │   ├── vertebraprompt_boxrefiner_adapter.py   # ★ activo: pipeline ganador (medsam)
-│   │       │   ├── progressive_unet_adapter.py            # activo: progressive-unet-binary
 │   │       │   ├── unetpp_patches_adapter.py              # activo: unetpp-patches
 │   │       │   ├── medsam_adapter.py                      # legacy (no usado)
 │   │       │   └── segformer_adapter.py                   # legacy (no usado)
@@ -323,7 +317,6 @@ services/
 │   ├── conftest.py                       # Fixtures compartidas
 │   └── unit/
 │       ├── test_analyze_image_use_case.py
-│       ├── test_progressive_unet_adapter.py
 │       ├── test_segformer_adapter.py
 │       ├── test_unetpp_patches_adapter.py
 │       ├── test_vertebrae_router.py

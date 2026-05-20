@@ -17,9 +17,6 @@ class Settings(BaseSettings):
     medsam_sam_checkpoint: str = "model-pkg/medsam/medsam_vit_b.pth"
     medsam_finetuned_checkpoint: str = "model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt"
 
-    # Experimento B del notebook unet (Progressive U-Net binaria estilo paper).
-    progressive_unet_checkpoint: str = "model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth"
-
     # Unet++ con encoder efficientnet-b7 entrenado por parches
     # (notebooks/unet++/Unet++_patches.ipynb).
     unetpp_patches_checkpoint: str = "model-pkg/unet++_patches/unet++_patches.pth"

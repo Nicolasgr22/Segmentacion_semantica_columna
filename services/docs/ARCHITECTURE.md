@@ -54,7 +54,6 @@ El endpoint POST acepta un campo de formulario opcional `model` que determina el
 | Valor | Modelo | Estado |
 |---|---|---|
 | `medsam` _(por defecto)_ | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned | Disponible |
-| `progressive-unet-binary` | Experimento B UNet paper-like, binario con band-split vertical T1–L5 | Disponible |
 | `unetpp-patches` | UNet++ encoder efficientnet-b7, ventana deslizante 128×128 (Dice test 0.4711) | Disponible |
 
 ---
@@ -118,7 +117,7 @@ Responsable de la comunicación HTTP: enrutamiento, validación de entrada, rate
 
 **`schemas/`**
 
-- `ModelName` (enum str): `medsam`, `progressive-unet-binary`, `unetpp-patches` — valida el campo `model` del form.
+- `ModelName` (enum str): `medsam`, `unetpp-patches` — valida el campo `model` del form.
 - `LoginRequest` / `LoginResponse` / `UserResponse` — schemas de autenticación.
 - `ExportFormat` (enum str): `png`, `mask`, `overlay`, `report`.
 - `AnalyzeResponse`, `HealthResponse`: modelos Pydantic para serialización de respuestas.
@@ -162,7 +161,7 @@ Recupera un `VertebraAnalysis` por `study_id` y genera el artefacto de exportaci
 
 | Port | Métodos | Implementaciones activas |
 |---|---|---|
-| `ModelPort` | `predict(image)`, `is_loaded()`, `get_model_version()` | `VertebraPromptBoxRefinerAdapter`, `ProgressiveUNetBinaryAdapter`, `UnetPlusPlusPatchesAdapter` |
+| `ModelPort` | `predict(image)`, `is_loaded()`, `get_model_version()` | `VertebraPromptBoxRefinerAdapter`, `UnetPlusPlusPatchesAdapter` |
 | `StoragePort` | `save()`, `get()`, `exists()`, `delete()` | `InMemoryStorageAdapter` |
 
 ---
@@ -177,12 +176,6 @@ Implementaciones concretas de los ports. Conocen librerías externas (torch, tra
 - `load_model()`: carga las 4 redes en memoria (VertebraPrompt-Net, BoxRefiner, SAM ViT-B base, MedSAM fine-tuned decoder+encoder parcial).
 - `predict()`: asíncrono — delega `_sync_predict()` a un `ThreadPoolExecutor` para no bloquear el event loop de FastAPI.
 - Preprocesamiento interno: resize 1024×1024 + normalización por percentiles 1/99.5 → VertebraPrompt-Net (heatmap+cajas) → BoxRefiner (ajusta cajas) → MedSAM por caja → composición multi-clase → máscara uint8.
-
-**`ProgressiveUNetBinaryAdapter`** _(activo — clave `progressive-unet-binary`)_
-
-- Implementa `ModelPort` con el Experimento B UNet paper-like.
-- Segmentación binaria con band-split vertical T1–L5.
-- Preprocesamiento interno propio del experimento B.
 
 **`UnetPlusPlusPatchesAdapter`** _(activo — clave `unetpp-patches`)_
 
@@ -199,9 +192,8 @@ Implementaciones concretas de los ports. Conocen librerías externas (torch, tra
 **`dependencies.py` — Contenedor de DI**
 
 - `get_medsam_adapter()` `@lru_cache`: instancia y carga `VertebraPromptBoxRefinerAdapter` una sola vez al primer request.
-- `get_progressive_unet_adapter()` `@lru_cache`: instancia y carga `ProgressiveUNetBinaryAdapter` una sola vez.
 - `get_unetpp_patches_adapter()` `@lru_cache`: instancia y carga `UnetPlusPlusPatchesAdapter` una sola vez.
-- `get_model_dispatch()`: retorna el dict `{ModelName → ModelPort}` con los tres adapters activos mapeados a sus claves de enum.
+- `get_model_dispatch()`: retorna el dict `{ModelName → ModelPort}` con los dos adapters activos mapeados a sus claves de enum.
 - `get_storage_adapter()` `@lru_cache`: instancia `InMemoryStorageAdapter` una sola vez.
 
 **`config.py` — Settings**
@@ -214,7 +206,6 @@ Configuración cargada desde variables de entorno o archivo `.env` vía Pydantic
 | `MEDSAM_BOX_REFINER_CHECKPOINT` | `model-pkg/medsam/box_refiner_best.pt` | Checkpoint de BoxRefiner |
 | `MEDSAM_SAM_CHECKPOINT` | `model-pkg/medsam/medsam_vit_b.pth` | Pesos SAM ViT-B base |
 | `MEDSAM_FINETUNED_CHECKPOINT` | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` | Decoder + encoder parcial fine-tuned |
-| `PROGRESSIVE_UNET_CHECKPOINT` | `model-pkg/exp_b_progressive_unet_binary_paper_like_logged_model/model.pth` | Checkpoint UNet progresivo binario (Experimento B) |
 | `UNETPP_PATCHES_CHECKPOINT` | `model-pkg/unet++_patches/unet++_patches.pth` | Checkpoint UNet++ con ventana deslizante |
 | `MODEL_DEVICE` | `cpu` | `cpu`, `cuda` o `mps` |
 | `MAX_UPLOAD_MB` | `50` | Límite de tamaño de imagen |
@@ -257,7 +248,7 @@ El router construye `AnalyzeImageUseCase(model_port, storage)` y llama `execute(
 11. MedSAM ViT-B fine-tuned produce una máscara binaria por caja; las máscaras se componen en máscara multi-clase `uint8 (H, W)`.
 12. Retorna `ModelOutput(mask, probabilities, latency_ms, model_version)`.
 
-> Cada adapter aplica su propio preprocesamiento específico al modelo que aloja. Para `progressive-unet-binary` se utiliza band-split vertical; para `unetpp-patches` se aplica ventana deslizante 128×128.
+> Cada adapter aplica su propio preprocesamiento específico al modelo que aloja. Para `unetpp-patches` se aplica ventana deslizante 128×128.
 
 #### Fase 4: Post-procesamiento y persistencia (pasos 18–24)
 

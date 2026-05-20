@@ -114,12 +114,11 @@ def mock_storage_port() -> StoragePort:
 @pytest.fixture
 def test_client(mock_model_port, mock_storage_port) -> TestClient:
     # Sustituimos también `get_model_dispatch` para no obligar a construir los
-    # adapters secundarios (Progressive U-Net, Unet++ por parches) durante los
-    # tests: cada uno tiene sus tests dedicados con un nn.Module dummy y aquí
-    # solo queremos validar el endpoint con el modelo por defecto.
+    # adapters secundarios (Unet++ por parches) durante los tests: cada uno
+    # tiene sus tests dedicados con un nn.Module dummy y aquí solo queremos
+    # validar el endpoint con el modelo por defecto.
     mocked_dispatch = {
         ModelName.MEDSAM: mock_model_port,
-        ModelName.PROGRESSIVE_UNET_BINARY: mock_model_port,
         ModelName.UNETPP_PATCHES: mock_model_port,
     }
     app.dependency_overrides[get_model_adapter] = lambda: mock_model_port
