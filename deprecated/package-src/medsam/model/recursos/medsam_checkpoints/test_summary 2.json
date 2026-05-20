@@ -1,0 +1,9 @@
+{
+  "run_name": "pipeline_vertebraprompt_boxrefiner_medsam",
+  "best_val_dice": 0.8792696281483299,
+  "test_dice": 0.844185977578645,
+  "test_iou": 0.7412460910577987,
+  "test_precision": 0.8306282535739843,
+  "test_recall": 0.8704113268601695,
+  "n_test_images": 38
+}
