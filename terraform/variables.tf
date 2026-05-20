@@ -40,6 +40,20 @@ variable "project_name" {
   default     = "maia-proyecto-final"
 }
 
+# ── Cognito Auth ─────────────────────────────────────────────────────────────
+
+variable "cognito_admin_username" {
+  description = "Nombre de usuario del administrador inicial en Cognito"
+  type        = string
+  default     = "maia_groupo5"
+}
+
+variable "cognito_admin_email" {
+  description = "Email del administrador inicial (para recuperación de contraseña)"
+  type        = string
+  default     = "anferiro@gmail.com"
+}
+
 # ── Servicio EC2 Spot ────────────────────────────────────────────────────────
 
 variable "instance_type" {

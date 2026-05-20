@@ -69,3 +69,25 @@ output "service_health_check" {
   description = "Curl para verificar que el servicio está arriba (vía CloudFront)"
   value       = "curl https://${aws_cloudfront_distribution.frontend.domain_name}/api/vertebraai/health"
 }
+
+# ── Cognito ───────────────────────────────────────────────────────────────────
+
+output "cognito_user_pool_id" {
+  description = "ID del Cognito User Pool — valor para COGNITO_USER_POOL_ID en .env"
+  value       = aws_cognito_user_pool.vertebraai.id
+}
+
+output "cognito_client_id" {
+  description = "Client ID de la app web — valor para COGNITO_CLIENT_ID en .env"
+  value       = aws_cognito_user_pool_client.vertebraai_web.id
+}
+
+output "cognito_user_pool_arn" {
+  description = "ARN del Cognito User Pool"
+  value       = aws_cognito_user_pool.vertebraai.arn
+}
+
+output "cognito_region" {
+  description = "Región del User Pool — valor para COGNITO_REGION en .env"
+  value       = var.aws_region
+}

@@ -1876,3 +1876,150 @@ body::after {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ── Login screen ─────────────────────────────────────────────────────────── */
+.login-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surf-1);
+  border: 1px solid var(--outline);
+  border-radius: 20px;
+  padding: 40px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.login-brand {
+  text-align: center;
+}
+
+.login-logo {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--on-surf-var);
+  margin-top: 4px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-surf-var);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.login-field {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surf-2);
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--on-surf);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.login-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.15);
+}
+
+.login-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-field::placeholder {
+  color: var(--on-surf-dim);
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--error);
+  background: rgba(255, 84, 112, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.login-submit {
+  width: 100%;
+  padding: 11px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-footer {
+  font-size: 11px;
+  color: var(--on-surf-dim);
+  text-align: center;
+  margin: 0;
+}
+
+/* Logout button in AppBar */
+.appbar-logout-btn {
+  font-size: 12px;
+  color: var(--on-surf-var);
+  gap: 4px;
+}
+
+.appbar-logout-btn:hover {
+  color: var(--error);
+}
+}

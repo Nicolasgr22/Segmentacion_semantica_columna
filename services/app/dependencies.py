@@ -1,14 +1,22 @@
 from functools import lru_cache
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request
 
 from app.api.v1.schemas.requests import ModelName
 from app.config import settings
+from app.core.domain.entities.user import AuthUser
+from app.core.domain.ports.auth_port import AuthPort
 from app.core.domain.ports.model_port import ModelPort
 from app.core.domain.ports.model_registry_port import ModelRegistryPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase
+from app.core.use_cases.auth_use_case import (
+    InvalidCredentialsError,
+    TokenValidationError,
+    ValidateTokenUseCase,
+)
 from app.core.use_cases.export_result import ExportResultUseCase
+from app.infrastructure.adapters.auth.cognito_auth_adapter import CognitoAuthAdapter
 from app.infrastructure.adapters.model.progressive_unet_adapter import (
     ProgressiveUNetBinaryAdapter,
 )
@@ -100,3 +108,47 @@ def get_export_use_case(
     storage: StoragePort = Depends(get_storage_adapter),
 ) -> ExportResultUseCase:
     return ExportResultUseCase(storage=storage)
+
+
+@lru_cache(maxsize=1)
+def get_auth_adapter() -> CognitoAuthAdapter:
+    return CognitoAuthAdapter()
+
+
+def get_auth_port(adapter: CognitoAuthAdapter = Depends(get_auth_adapter)) -> AuthPort:
+    return adapter
+
+
+_DUMMY_USER = AuthUser(email="dev@local", name="dev", sub="local-dev")
+
+
+async def get_current_user(
+    request: Request,
+    auth_port: AuthPort = Depends(get_auth_port),
+) -> AuthUser:
+    """Extrae y valida el Bearer token del header Authorization.
+
+    Si auth_enabled=False (desarrollo local sin Cognito), devuelve un usuario
+    ficticio para que los endpoints protegidos funcionen sin credenciales.
+    """
+    if not settings.auth_enabled:
+        return _DUMMY_USER
+
+    auth_header: str = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Se requiere autenticación Bearer",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = auth_header.removeprefix("Bearer ").strip()
+    use_case = ValidateTokenUseCase(auth=auth_port)
+    try:
+        return await use_case.execute(token)
+    except (TokenValidationError, InvalidCredentialsError) as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
