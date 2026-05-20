@@ -8,7 +8,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1.routers import export, health, models, vertebrae
+from app.api.v1.routers import auth, export, health, models, vertebrae
 from app.config import settings
 from app.dependencies import get_model_adapter
 from app.rate_limit import limiter
@@ -73,3 +73,4 @@ app.include_router(vertebrae.router, prefix="/api/vertebraai")
 app.include_router(health.router, prefix="/api/vertebraai")
 app.include_router(export.router, prefix="/api/vertebraai")
 app.include_router(models.router, prefix="/api/vertebraai")
+app.include_router(auth.router, prefix="/api/vertebraai")

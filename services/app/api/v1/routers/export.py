@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
 from app.api.v1.schemas.requests import ExportFormat
+from app.core.domain.entities.user import AuthUser
 from app.core.use_cases.export_result import ExportResultUseCase, StudyNotFoundError
-from app.dependencies import get_export_use_case
+from app.dependencies import get_current_user, get_export_use_case
 
 router = APIRouter(prefix="/xrays", tags=["xrays"])
 
@@ -26,6 +27,7 @@ async def get_xray_export(
     xray_id: str,
     format: ExportFormat,
     use_case: ExportResultUseCase = Depends(get_export_use_case),
+    current_user: AuthUser | None = Depends(get_current_user),
 ) -> Response:
     try:
         data, media_type = await use_case.execute(xray_id, format.value)

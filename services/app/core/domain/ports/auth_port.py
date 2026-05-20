@@ -1,0 +1,14 @@
+from abc import ABC, abstractmethod
+
+from app.core.domain.entities.user import AuthSession, AuthUser
+
+
+class AuthPort(ABC):
+    @abstractmethod
+    async def login(self, email: str, password: str) -> AuthSession: ...
+
+    @abstractmethod
+    async def validate_token(self, token: str) -> AuthUser: ...
+
+    @abstractmethod
+    async def logout(self, access_token: str) -> None: ...

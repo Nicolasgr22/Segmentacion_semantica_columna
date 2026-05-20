@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     rate_limit_default: str = "120/minute"
     rate_limit_analyze: str = "5/minute"
 
+    # Auth / Cognito
+    auth_enabled: bool = True
+    cognito_user_pool_id: str = ""
+    cognito_client_id: str = ""
+    cognito_region: str = "us-east-1"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

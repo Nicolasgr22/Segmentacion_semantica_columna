@@ -10,7 +10,9 @@ from app.core.domain.ports.model_port import ModelPort
 from app.core.domain.ports.model_registry_port import ModelRegistryPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.core.use_cases.analyze_image import AnalyzeImageUseCase, InvalidImageError
+from app.core.domain.entities.user import AuthUser
 from app.dependencies import (
+    get_current_user,
     get_model_dispatch,
     get_model_registry_port,
     get_storage_adapter,
@@ -50,6 +52,7 @@ async def create_analysis(
     model_registry: dict[ModelName, ModelPort] = Depends(get_model_dispatch),
     storage: StoragePort = Depends(get_storage_adapter),
     registry: ModelRegistryPort = Depends(get_model_registry_port),
+    current_user: AuthUser | None = Depends(get_current_user),
 ) -> AnalyzeResponse:
     accepted_types = ("image/png", "image/jpeg", "image/jpg", "application/octet-stream")
     if file.content_type not in accepted_types:
