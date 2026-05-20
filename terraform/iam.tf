@@ -217,3 +217,164 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
     ]
   })
 }
+
+# ── Permisos del role de despliegue para gestionar el bucket de modelos ───────
+
+resource "aws_iam_role_policy" "maia_role_models_bucket" {
+  name = "maia-models-bucket-policy"
+  role = data.aws_iam_role.maia_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ModelsBucketManage"
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket",
+          "s3:DeleteBucket",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning",
+          "s3:PutBucketVersioning",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:DeleteBucketPolicy",
+        ]
+        Resource = "arn:aws:s3:::${var.project_name}-models"
+      },
+      {
+        Sid    = "ModelsObjectsManage"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:GetObjectVersion",
+          "s3:DeleteObjectVersion",
+        ]
+        Resource = "arn:aws:s3:::${var.project_name}-models/*"
+      },
+    ]
+  })
+}
+
+# ── Permisos del role de despliegue para gestionar el usuario models-reader ───
+
+resource "aws_iam_role_policy" "maia_role_models_reader_iam" {
+  name = "maia-models-reader-iam-policy"
+  role = data.aws_iam_role.maia_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ManageModelsReaderUser"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateUser",
+          "iam:DeleteUser",
+          "iam:GetUser",
+          "iam:TagUser",
+          "iam:UntagUser",
+          "iam:ListUserTags",
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:user/${var.project_name}-models-reader"
+      },
+      {
+        Sid    = "ManageModelsReaderAccessKey"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateAccessKey",
+          "iam:DeleteAccessKey",
+          "iam:ListAccessKeys",
+          "iam:UpdateAccessKey",
+          "iam:GetAccessKeyLastUsed",
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:user/${var.project_name}-models-reader"
+      },
+      {
+        Sid    = "ManageModelsReadOnlyPolicy"
+        Effect = "Allow"
+        Action = [
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+          "iam:ListEntitiesForPolicy",
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:policy/${var.project_name}-models-read-only"
+      },
+      {
+        Sid    = "AttachModelsPolicy"
+        Effect = "Allow"
+        Action = [
+          "iam:AttachUserPolicy",
+          "iam:DetachUserPolicy",
+          "iam:ListAttachedUserPolicies",
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:user/${var.project_name}-models-reader"
+      },
+    ]
+  })
+}
+
+# ── Usuario IAM de solo lectura para descargar modelos ────────────────────────
+
+resource "aws_iam_user" "models_reader" {
+  name = "${var.project_name}-models-reader"
+
+  tags = {
+    Project = var.project_name
+    Purpose = "read-only-models-download"
+  }
+}
+
+resource "aws_iam_policy" "models_read_only" {
+  name        = "${var.project_name}-models-read-only"
+  description = "Acceso de solo lectura al bucket de modelos ML (xrays: medsam + unetpp)"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ListModelsBucket"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+        ]
+        Resource = aws_s3_bucket.models.arn
+      },
+      {
+        Sid    = "GetModelObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+        ]
+        Resource = "${aws_s3_bucket.models.arn}/*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "models_reader" {
+  user       = aws_iam_user.models_reader.name
+  policy_arn = aws_iam_policy.models_read_only.arn
+}
+
+resource "aws_iam_access_key" "models_reader" {
+  user = aws_iam_user.models_reader.name
+}

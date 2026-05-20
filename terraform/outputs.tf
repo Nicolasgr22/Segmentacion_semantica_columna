@@ -91,3 +91,34 @@ output "cognito_region" {
   description = "Región del User Pool — valor para COGNITO_REGION en .env"
   value       = var.aws_region
 }
+
+# ── Modelos ML compartidos ────────────────────────────────────────────────────
+
+output "models_bucket" {
+  description = "Bucket S3 que almacena los modelos xrays (medsam + unetpp)"
+  value       = aws_s3_bucket.models.bucket
+}
+
+output "models_reader_access_key_id" {
+  description = "AWS Access Key ID del usuario de solo lectura — compartir con quien necesite los modelos"
+  value       = aws_iam_access_key.models_reader.id
+}
+
+output "models_reader_secret_key" {
+  description = "AWS Secret Access Key del usuario de solo lectura — recuperar con: terraform output -raw models_reader_secret_key"
+  value       = aws_iam_access_key.models_reader.secret
+  sensitive   = true
+}
+
+output "models_upload_command" {
+  description = "Comando para subir los modelos al bucket (ejecutar desde la raíz del proyecto)"
+  value       = <<-EOT
+    aws s3 cp services/model-pkg/medsam/  s3://${aws_s3_bucket.models.bucket}/xrays/medsam/  --recursive
+    aws s3 cp services/model-pkg/unet++_patches/ s3://${aws_s3_bucket.models.bucket}/xrays/unetpp/ --recursive
+  EOT
+}
+
+output "models_download_command" {
+  description = "Comando que puede usar quien reciba las credenciales para descargar los modelos"
+  value       = "aws s3 cp s3://${aws_s3_bucket.models.bucket}/xrays/ ./models/ --recursive"
+}

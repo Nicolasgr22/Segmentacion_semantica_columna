@@ -41,13 +41,14 @@ Este es un repositorio **monorepo** que agrupa los tres componentes del proyecto
 | Investigación | `notebooks/` | Jupyter + PyTorch | Exploración, entrenamiento y evaluación de modelos |
 | Frontend | `frontend/` | React (SPA) | Interfaz web para radiólogos |
 | Backend | `services/` | FastAPI + Docker | API REST de inferencia en producción |
+| model-pkg | `services/model-pkg` |  | Modelos usados por los servicios |
 | Infraestructura | `terraform/` | Terraform + AWS | Despliegue reproducible en la nube |
 
 ```
 Segmentacion_semantica_columna/
 ├── deprecated/                             # Código abandonado, conservado por trazabilidad
 │   └── package-src/
-│       └── medsam/                         # Intento de empaquetar el pipeline MedSAM como .whl
+│       └── medsam/                         # Empaquetamiento el pipeline MedSAM como .whl
 │           ├── dist/                       # Artefactos generados (model_medsam-0.1.0.whl)
 │           ├── model/                      # Redes, pipeline, entrenamiento y predicción
 │           ├── tests/                      # Pruebas unitarias del paquete
