@@ -1,9 +1,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
-#  EC2 Spot que corre el servicio FastAPI (VertebraPrompt + BoxRefiner + MedSAM).
+#  EC2 On-Demand que corre el servicio FastAPI (VertebraPrompt + BoxRefiner + MedSAM).
 #
-#  Diseño: una sola instancia Spot one-time con IP pública auto-asignada.
-#  - Sin EIP (más barato; si AWS reclama el spot, `terraform apply` levanta
-#    otra instancia con IP nueva y el frontend se re-sincroniza).
+#  Diseño: una sola instancia On-Demand con IP pública auto-asignada.
+#  - Sin EIP; si la instancia se recrea, obtiene nueva IP pública auto-asignada.
 #  - Sin ALB ni NLB (HTTP plano por la IP pública en el puerto var.host_port).
 #  - Sin EKS (control plane $73/mes innecesario para un único servicio).
 # ──────────────────────────────────────────────────────────────────────────────
@@ -247,18 +246,10 @@ resource "aws_security_group" "svc" {
   }
 }
 
-# 6. EC2 Spot one-time
+# 6. EC2 On-Demand
 resource "aws_instance" "svc" {
   ami           = data.aws_ami.al2023.id
   instance_type = var.instance_type
-
-  instance_market_options {
-    market_type = "spot"
-    spot_options {
-      spot_instance_type             = "one-time"
-      instance_interruption_behavior = "terminate"
-    }
-  }
 
   iam_instance_profile        = aws_iam_instance_profile.svc.name
   vpc_security_group_ids      = [aws_security_group.svc.id]
@@ -296,7 +287,7 @@ resource "aws_instance" "svc" {
   }
 
   tags = {
-    Name      = "${var.project_name}-svc-spot"
+    Name      = "${var.project_name}-svc-ondemand"
     Project   = var.project_name
     Component = "services"
     ManagedBy = "terraform"
