@@ -96,7 +96,7 @@ resource "aws_iam_role_policy" "maia_role_frontend" {
 
 # ── Permisos para administrar el stack del servicio (EC2 + ECR + IAM) ───────
 # El role del proyecto necesita estos permisos para que `terraform apply`
-# pueda crear/actualizar el ECR repo, la EC2 Spot, el security group y el
+# pueda crear/actualizar el ECR repo, la EC2 On-Demand, el security group y el
 # instance profile que asume la EC2.
 
 resource "aws_iam_role_policy" "maia_role_services_stack" {
@@ -106,7 +106,7 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # ec2:Describe*, RunInstances, CreateSecurityGroup y la familia spot solo
+      # ec2:Describe*, RunInstances, CreateSecurityGroup y afines solo
       # soportan Resource="*" en IAM. Lo scopeamos por condición a la región del
       # proyecto y a tags del proyecto, así si el role se filtra el blast radius
       # queda limitado a recursos taggeados/region propia.
@@ -139,8 +139,6 @@ resource "aws_iam_role_policy" "maia_role_services_stack" {
           "ec2:CreateTags",
           "ec2:DeleteTags",
           "ec2:ModifyInstanceAttribute",
-          "ec2:RequestSpotInstances",
-          "ec2:CancelSpotInstanceRequests",
         ]
         Resource = "*"
         Condition = {
