@@ -1,0 +1,251 @@
+direction: right
+
+# ══════════════════════════════════════════════════════════════════════
+# USUARIO
+# ══════════════════════════════════════════════════════════════════════
+browser: "Usuario\n(Browser)" {
+  shape: person
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-color: "#0D47A1"
+  style.bold: true
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# CLOUDFRONT  (único punto de entrada HTTPS)
+# ══════════════════════════════════════════════════════════════════════
+cloudfront: "CloudFront\n*.cloudfront.net  ·  HTTPS" {
+  style.fill: "#E8EAF6"
+  style.stroke: "#3949AB"
+  style.stroke-width: 2
+  style.border-radius: 12
+  style.font-color: "#283593"
+  style.bold: true
+
+  icon: https://icons.terrastruct.com/aws/Networking%20&%20Content%20Delivery/Amazon-CloudFront.svg
+  shape: image
+  width: 80
+  height: 80
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# ORIGEN 1 — S3 FRONTEND  (default behavior  /*  )
+# ══════════════════════════════════════════════════════════════════════
+s3_frontend: "S3 Frontend\nStatic Website Hosting" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  style.border-radius: 10
+  style.font-color: "#0D47A1"
+  style.bold: true
+
+  bucket: "SPA\n(React 18)" {
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+    shape: image
+    width: 70
+    height: 70
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# ORIGEN 2 — EC2 SPOT  (path /api/*  )
+# Default VPC  ·  subnet público  ·  IP pública auto-asignada
+# ══════════════════════════════════════════════════════════════════════
+ec2_group: "EC2 Spot  ·  t3.large  ·  Default VPC" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#2E7D32"
+  style.stroke-width: 2
+  style.border-radius: 12
+  style.font-color: "#1B5E20"
+  style.bold: true
+
+  ec2: "AWS EC2\nInstance" {
+    icon: https://icons.terrastruct.com/aws/Compute/Amazon-EC2_light-bg.svg
+    shape: image
+    width: 70
+    height: 70
+  }
+
+  container: "Docker\nFastAPI :8000\nML models ~2 GB" {
+    icon: https://cdn.simpleicons.org/docker/2496ed
+    shape: image
+    width: 70
+    height: 70
+  }
+
+  sg: "Security Group\n:80 in  ·  :443/:80 out" {
+    shape: rectangle
+    style.fill: "#FFCDD2"
+    style.stroke: "#C62828"
+    style.border-radius: 6
+    style.font-color: "#B71C1C"
+    style.font-size: 12
+  }
+
+  ssm: "SSM Session Manager" {
+    shape: rectangle
+    style.fill: "#DCEDC8"
+    style.stroke: "#558B2F"
+    style.border-radius: 6
+    style.font-size: 12
+  }
+
+  ec2 -> container: "runs" { style.border-radius: 0 }
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# ECR  —  registry de la imagen Docker
+# ══════════════════════════════════════════════════════════════════════
+ecr: "Amazon ECR\nmaia-proyecto-final-svc" {
+  icon: https://cdn.simpleicons.org/docker/2496ed
+  shape: image
+  width: 65
+  height: 65
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# COGNITO  —  autenticación
+# ══════════════════════════════════════════════════════════════════════
+cognito: "AWS Cognito\nvertebráai-users  ·  JWT 1h" {
+  shape: rectangle
+  style.fill: "#FCE4EC"
+  style.stroke: "#C62828"
+  style.stroke-width: 2
+  style.border-radius: 10
+  style.font-color: "#880E4F"
+  style.bold: true
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# RECURSOS DE SOPORTE
+# ══════════════════════════════════════════════════════════════════════
+soporte: "Recursos de Soporte" {
+  direction: right
+  style.fill: "#FAFAFA"
+  style.stroke: "#90A4AE"
+  style.stroke-width: 1
+  style.border-radius: 10
+  style.font-color: "#546E7A"
+  style.bold: true
+
+  s3_models: "S3 Models" {
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+    shape: image
+    width: 60
+    height: 60
+  }
+
+  s3_state: "S3 Terraform State" {
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+    shape: image
+    width: 60
+    height: 60
+  }
+
+  iam: "IAM" {
+    icon: https://icons.terrastruct.com/aws/Management%20&%20Governance/AWS-Organizations.svg
+    shape: image
+    width: 60
+    height: 60
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# FLUJO PRINCIPAL DE TRÁFICO
+# ══════════════════════════════════════════════════════════════════════
+browser -> cloudfront: "1. HTTPS" {
+  style.stroke: "#1565C0"
+  style.stroke-width: 3
+  style.font-color: "#1565C0"
+  style.bold: true
+  style.border-radius: 0
+}
+
+cloudfront -> s3_frontend.bucket: "2a. Path /*\narchivos estáticos (TTL 3600s)" {
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  style.font-color: "#1565C0"
+  style.border-radius: 0
+}
+
+cloudfront -> ec2_group.ec2: "2b. Path /api/*\n(CachingDisabled + AllViewerExceptHostHeader)" {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 2
+  style.font-color: "#2E7D32"
+  style.bold: true
+  style.border-radius: 0
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# DEPENDENCIAS DEL EC2 (arranque y runtime)
+# ══════════════════════════════════════════════════════════════════════
+ec2_group.container -> ecr: "docker pull\n(startup via user_data.sh)" {
+  style.stroke: "#1976D2"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#1565C0"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+ec2_group.container -> cognito: "InitiateAuth / ValidateJWT\n(cada request autenticado)" {
+  style.stroke: "#C62828"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#880E4F"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+soporte.iam -> ec2_group.ec2: "instance profile\n(ECR pull + SSM)" {
+  style.stroke: "#F9A825"
+  style.stroke-width: 1
+  style.stroke-dash: 4
+  style.font-color: "#E65100"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+# ══════════════════════════════════════════════════════════════════════
+# FLUJO TERRAFORM (despliegue)
+# ══════════════════════════════════════════════════════════════════════
+terraform: "terraform apply" {
+  shape: rectangle
+  style.fill: "#EDE7F6"
+  style.stroke: "#4527A0"
+  style.stroke-width: 2
+  style.border-radius: 8
+  style.font-color: "#311B92"
+  style.bold: true
+}
+
+terraform -> ecr: "docker build + push\n(null_resource.deploy_image)" {
+  style.stroke: "#4527A0"
+  style.stroke-width: 2
+  style.font-color: "#311B92"
+  style.border-radius: 0
+}
+
+terraform -> s3_frontend.bucket: "aws s3 sync frontend/\n+ CloudFront invalidation" {
+  style.stroke: "#4527A0"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#4527A0"
+  style.border-radius: 0
+}
+
+terraform -> ec2_group.ec2: "terraform apply\n(lanza EC2 Spot + user_data)" {
+  style.stroke: "#4527A0"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#4527A0"
+  style.border-radius: 0
+}
+
+terraform -> soporte.s3_state: "lee / escribe estado\n(backend S3)" {
+  style.stroke: "#90A4AE"
+  style.stroke-width: 1
+  style.stroke-dash: 4
+  style.font-color: "#546E7A"
+  style.border-radius: 0
+}
