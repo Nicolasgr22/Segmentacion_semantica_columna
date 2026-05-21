@@ -69,3 +69,4 @@ frontend/config.js
 .claude
 
 terraform.tfstate*
+tfplan
