@@ -1,0 +1,43 @@
+shape: sequence_diagram
+
+# ─── Actores coloreados por capa ───────────────────────────────
+usuario: "Usuario\n(Browser)" {
+  shape: person
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+}
+
+frontend: "VertebraAI SPA\nFrontend Layer" {
+  style.fill: "#BBDEFB"
+  style.stroke: "#1565C0"
+  style.font-color: "#1565C0"
+  style.bold: true
+}
+
+backend: "FastAPI App\nauth.py — LoginUseCase\nBackend Layer" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.font-color: "#2E7D32"
+  style.bold: true
+}
+
+cognito: "AWS Cognito\nUser Pool\nSecurity Layer" {
+  style.fill: "#FFE0B2"
+  style.stroke: "#E65100"
+  style.font-color: "#E65100"
+  style.bold: true
+}
+
+# ─── Flujo de Autenticación ────────────────────────────────────
+usuario -> frontend: "1. Ingresa username + password\n→ clic Iniciar Sesión"
+frontend -> backend: "2. POST /api/vertebraai/auth/login\n     {username, password}"
+backend -> cognito: "3. boto3: client.initiate_auth(\n     AuthFlow=USER_PASSWORD_AUTH\n     AuthParameters={USERNAME, PASSWORD})"
+cognito -> backend: "4. AuthenticationResult\n     {IdToken, AccessToken, RefreshToken, ExpiresIn: 3600}"
+backend -> frontend: "5. LoginResponse\n     {id_token, access_token, expires_in}"
+frontend -> frontend: "6. Almacena id_token en memoria\n     authenticated = true"
+frontend -> usuario: "7. Panel de carga de radiografías\n     desbloqueado"
+
+# ─── Flujo de Error ────────────────────────────────────────────
+cognito -> backend: "— Error: NotAuthorizedException"
+backend -> frontend: "— 401 Unauthorized\n     {detail: Credenciales inválidas}"
+frontend -> usuario: "— Muestra mensaje de error"

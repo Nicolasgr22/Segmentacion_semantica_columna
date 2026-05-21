@@ -1,0 +1,61 @@
+shape: sequence_diagram
+
+# ─── Actores coloreados por capa ───────────────────────────────
+usuario: "Usuario\n(Browser)" {
+  shape: person
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+}
+
+frontend: "VertebraAI SPA\nUploadPanel + ResultPanel\nFrontend Layer" {
+  style.fill: "#BBDEFB"
+  style.stroke: "#1565C0"
+  style.font-color: "#1565C0"
+  style.bold: true
+}
+
+backend: "FastAPI App\nvertebrae.py\nBackend Layer" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.font-color: "#2E7D32"
+  style.bold: true
+}
+
+cognito: "AWS Cognito\nJWT Validation\nSecurity Layer" {
+  style.fill: "#FFE0B2"
+  style.stroke: "#E65100"
+  style.font-color: "#E65100"
+  style.bold: true
+}
+
+usecase: "AnalyzeImage\nUseCase" {
+  style.fill: "#DCEDC8"
+  style.stroke: "#33691E"
+  style.font-color: "#33691E"
+  style.bold: true
+}
+
+ml: "ML Models Layer\nEC2 / FileSystem\nVertebraPrompt + BoxRefiner + MedSAM" {
+  style.fill: "#B2DFDB"
+  style.stroke: "#00695C"
+  style.font-color: "#00695C"
+  style.bold: true
+}
+
+# ─── Flujo de Análisis de Rayos X ──────────────────────────────
+usuario -> frontend: "1. Selecciona imagen (PNG/DICOM)\n     + modelo de segmentación"
+frontend -> backend: "2. POST /api/vertebraai/xrays\n     Authorization: Bearer {id_token}\n     multipart/form-data: {file, model_name}"
+backend -> cognito: "3. Valida JWT → get_current_user()"
+cognito -> backend: "4. UserInfo {username, sub}"
+backend -> usecase: "5. AnalyzeImageUseCase.execute(\n     image_bytes, model_name, user)"
+usecase -> ml: "6. Preprocessing (OpenCV):\n     Resize 512×512, normalize → Tensor\n     → VertebraPrompt-Net forward pass"
+ml -> ml: "7. bbox proposals [22 vértebras]\n     → BoxRefiner → refined boxes\n     → MedSAM ViT-B → masks"
+ml -> usecase: "8. Segmentation results\n     Dice=0.553  |  IoU=0.45  |  latency_ms"
+usecase -> backend: "9. VertebraAnalysis entity\n     (22 Vertebra objects + metrics)"
+backend -> frontend: "10. 200 OK:\n     {study_id, mask:{data (base64 PNG), dimensions},\n     metrics:{confidence, detected_count, by_region,\n     model_metrics:{dice, iou, latency_ms}},\n     vertebrae:[22 objetos]}"
+frontend -> frontend: "11. Decodifica base64 → Blob URL\n     Renderiza en <canvas> sobre imagen original\n     Actualiza MetricsPanel + VertebraTable"
+frontend -> usuario: "12. Resultado visible:\n     imagen con máscara + métricas + tabla 22 vértebras"
+
+# ─── Flujos de Error ───────────────────────────────────────────
+backend -> frontend: "— 413 Request Entity Too Large\n     (archivo > MAX_UPLOAD_MB=50)"
+backend -> frontend: "— 429 Too Many Requests\n     (límite 5/min alcanzado)"

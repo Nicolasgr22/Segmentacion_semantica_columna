@@ -1,0 +1,24 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Exportación de Resultados (Backend)
+|
+
+client: Cliente\n(Frontend)
+router: export.py\n(Router)
+uc: ExportResult\nUseCase
+storage: InMemory\nAdapter
+
+client -> router: "GET /api/vertebraai/xrays/{study_id}\n/exports/{format}\nAuthorization: Bearer {id_token}\nformat ∈ {png, mask, overlay, report}"
+router -> router: "Valida JWT (get_current_user)\nValida format enum"
+router -> uc: "ExportResultUseCase.execute\n(study_id, format, user)"
+uc -> storage: "InMemoryAdapter.get(study_id)"
+storage -> uc: "VertebraAnalysis | None"
+uc -> uc: "Si None → raises StudyNotFoundError"
+uc -> uc: "Convierte según format:\npng → imagen original bytes\nmask → máscara binaria PNG\noverlay → imagen + máscara coloreada (blend)\nreport → JSON con métricas completas"
+uc -> router: "ExportResult {bytes, content_type, filename}"
+router -> client: "200 FileResponse\nContent-Disposition: attachment; filename={study_id}.{ext}\nContent-Type: image/png | application/json"
+
+storage -> uc: "None (estudio no encontrado)"
+uc -> router: "raises StudyNotFoundError"
+router -> client: "404 Not Found:\n{detail: Estudio no encontrado.\nEl resultado puede haber expirado.}"

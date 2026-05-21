@@ -1,0 +1,40 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Pipeline de Segmentación (Backend)
+|
+
+client: Cliente\n(Frontend)
+router: vertebrae.py\n(Router)
+di: get_current_user()\n(DI — FastAPI)
+uc: AnalyzeImage\nUseCase
+registry: ModelRegistry
+adapter: VertebraPromptBoxRefiner\nMedSAMAdapter
+torch: PyTorch\n(CPU / GPU)
+
+client -> router: "POST /api/vertebraai/xrays\nAuthorization: Bearer {id_token}\nmultipart/form-data: {file, model_name}"
+router -> di: "Valida JWT"
+di -> router: "UserInfo {username, sub}"
+router -> router: "Valida: tamaño archivo ≤ MAX_UPLOAD_MB\nExtrae bytes de la imagen"
+router -> uc: "AnalyzeImageUseCase.execute\n(image_bytes, model_name, user)"
+uc -> registry: "ModelRegistry.get\n(ModelName.VERTEBRAPROMPT_BOXREFINER_MEDSAM)"
+registry -> uc: "VertebraPromptBoxRefinerMedSAMAdapter"
+uc -> adapter: "adapter.predict(image_bytes)"
+adapter -> adapter: "Preprocessing (OpenCV):\nResize → 512×512\nNormalize [0, 1]\nConvert → PyTorch Tensor"
+adapter -> torch: "VertebraPrompt-Net forward pass\n→ bbox proposals"
+torch -> adapter: "Tensor: boxes[22, 4] + scores[22]\n(una caja por vértebra)"
+adapter -> torch: "BoxRefiner forward pass\n→ refined boxes"
+torch -> adapter: "Tensor: refined_boxes[22, 4]\n(cajas anatómicamente ajustadas)"
+adapter -> torch: "MedSAM ViT-B:\nSAM encode + decode\npor cada caja → máscara"
+torch -> adapter: "Tensor: masks[22, H, W]\n(máscara binaria por vértebra)"
+adapter -> adapter: "Post-processing:\ncomputa pixel_count, centroid, bbox\ncalcula Dice=0.553, IoU=0.45\nlatency_ms total"
+adapter -> uc: "VertebraAnalysis(study_id, vertebrae[22],\nmetrics{dice, iou, latency_ms})"
+uc -> router: "VertebraAnalysis domain entity"
+router -> router: "Serializa a JSON response\nmask.data = base64(PNG coloreado)"
+router -> client: "200 OK: {study_id, mask:{data, dimensions},\nmetrics:{confidence, detected_count,\nby_region, model_metrics},\nvertebrae:[22 objetos]}"
+
+client -> router: "[Error] archivo > MAX_UPLOAD_MB"
+router -> client: "413 Request Entity Too Large:\n{detail: Imagen supera el límite de 50 MB}"
+
+router -> client: "[Error] RATE_LIMIT_ANALYZE superado"
+router -> client: "429 Too Many Requests:\n{detail: 5 requests per 1 minute}"

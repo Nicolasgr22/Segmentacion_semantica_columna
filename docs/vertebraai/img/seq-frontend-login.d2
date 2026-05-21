@@ -1,0 +1,22 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Login desde el Frontend
+|
+
+usuario: Usuario
+app: App (app.jsx)\nLoginPanel
+config: config.js
+api: Backend API\n(FastAPI)
+
+usuario -> app: "Abre la aplicación"
+app -> config: "Lee window.BACKEND_URL"
+config -> app: "BACKEND_URL\n(vacío en prod / localhost:8000 en dev)"
+usuario -> app: "Ingresa username + password\nclic en Iniciar Sesión"
+app -> api: "POST {BACKEND_URL}/api/vertebraai/auth/login\nBody: {username, password}"
+api -> app: "200 OK: {id_token, access_token,\ntoken_type: Bearer, expires_in: 3600}"
+app -> app: "Almacena id_token en memoria\nauthenticated = true\nHabilita UploadPanel"
+app -> usuario: "Muestra panel de carga\nde radiografías"
+
+api -> app: "[Error] 401 Unauthorized:\n{detail: Credenciales inválidas}"
+app -> usuario: "Muestra mensaje de error\nen el formulario de login"

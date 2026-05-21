@@ -1,0 +1,221 @@
+direction: right
+
+# ══════════════════════════════════════════════════════════════════
+# CARGA INICIAL
+# ══════════════════════════════════════════════════════════════════
+boot: "Carga Inicial" {
+  direction: down
+  style.fill: "#EDE7F6"
+  style.stroke: "#4527A0"
+  style.stroke-width: 2
+  style.border-radius: 10
+  style.bold: true
+  style.font-color: "#4527A0"
+
+  index: "index.html\nEntry Point" {
+    shape: rectangle
+    style.fill: "#4527A0"
+    style.stroke: "#311B92"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 6
+    style.bold: true
+  }
+
+  react: "React 18 UMD\n+ Babel Standalone\n(CDN)" {
+    shape: rectangle
+    style.fill: "#D1C4E9"
+    style.stroke: "#4527A0"
+    style.border-radius: 6
+  }
+
+  csslib: "styles.css\nMaterial 3 Dark Mode" {
+    shape: rectangle
+    style.fill: "#D1C4E9"
+    style.stroke: "#4527A0"
+    style.border-radius: 6
+  }
+
+  config: "config.js\nwindow.BACKEND_URL" {
+    shape: rectangle
+    style.fill: "#FFF9C4"
+    style.stroke: "#F9A825"
+    style.font-color: "#E65100"
+    style.border-radius: 6
+    style.bold: true
+  }
+
+  index -> react:   "carga" { style.border-radius: 0 }
+  index -> csslib:  "carga" { style.border-radius: 0 }
+  index -> config:  "carga" { style.border-radius: 0 }
+}
+
+# ══════════════════════════════════════════════════════════════════
+# CAPA DE INTERACCIÓN (App components)
+# ══════════════════════════════════════════════════════════════════
+app: "App — app.jsx" {
+  direction: down
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  style.border-radius: 10
+  style.bold: true
+  style.font-color: "#1565C0"
+
+  login: "LoginPanel\nusername + password form" {
+    shape: rectangle
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+
+  upload: "UploadPanel\nfile input + model selector" {
+    shape: rectangle
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+
+  tweaks: "TweaksPanel\ntweaks-panel.jsx\nopciones visuales y tema" {
+    shape: rectangle
+    style.fill: "#E3F2FD"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════
+# CAPA DE RESULTADOS
+# ══════════════════════════════════════════════════════════════════
+result: "ResultPanel" {
+  direction: down
+  style.fill: "#E1F5FE"
+  style.stroke: "#0277BD"
+  style.stroke-width: 2
+  style.border-radius: 10
+  style.bold: true
+  style.font-color: "#0277BD"
+
+  canvas: "CanvasOverlay\nDecodifica base64\nRenderiza en <canvas>" {
+    shape: rectangle
+    style.fill: "#81D4FA"
+    style.stroke: "#0277BD"
+    style.border-radius: 6
+  }
+
+  metrics: "MetricsPanel\nDice · IoU · confidence\nby_region (cervical / thoracic / lumbar)" {
+    shape: rectangle
+    style.fill: "#81D4FA"
+    style.stroke: "#0277BD"
+    style.border-radius: 6
+  }
+
+  vtable: "VertebraTable\n22 filas: C1-C7 · T1-T12 · L1-L5\nid · región · detectada · confianza · bbox" {
+    shape: rectangle
+    style.fill: "#81D4FA"
+    style.stroke: "#0277BD"
+    style.border-radius: 6
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════
+# BACKEND EXTERNO
+# ══════════════════════════════════════════════════════════════════
+backend: "Backend API\nCloudFront → EC2 / FastAPI" {
+  shape: rectangle
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+  style.stroke-width: 2
+  style.border-radius: 8
+  style.bold: true
+  style.font-color: "#37474F"
+}
+
+# ══════════════════════════════════════════════════════════════════
+# CONEXIONES PRINCIPALES
+# ══════════════════════════════════════════════════════════════════
+
+# Boot → App (carga y transpila JSX)
+boot -> app: "carga y transpila JSX" {
+  style.stroke: "#4527A0"
+  style.stroke-width: 2
+  style.font-color: "#4527A0"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+# Config → paneles que llaman al backend
+boot.config -> app.login:   "window.BACKEND_URL" {
+  style.stroke: "#F9A825"
+  style.stroke-dash: 4
+  style.font-color: "#E65100"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+boot.config -> app.upload:  "window.BACKEND_URL" {
+  style.stroke: "#F9A825"
+  style.stroke-dash: 4
+  style.font-color: "#E65100"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+# LoginPanel ↔ Backend
+app.login -> backend: "POST /auth/login\n{username, password}" {
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  style.font-color: "#1565C0"
+  style.font-size: 11
+  style.border-radius: 0
+}
+backend -> app.login: "{id_token, access_token}" {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#2E7D32"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+# UploadPanel → Backend → ResultPanel
+app.upload -> backend: "POST /xrays\nAuthorization: Bearer {token}\nmultipart/form-data" {
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  style.font-color: "#1565C0"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+backend -> result.canvas:  "mask.data (base64 PNG)" {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#2E7D32"
+  style.font-size: 11
+  style.border-radius: 0
+}
+backend -> result.metrics: "{dice, iou, confidence, by_region}" {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#2E7D32"
+  style.font-size: 11
+  style.border-radius: 0
+}
+backend -> result.vtable:  "vertebrae[22]" {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+  style.font-color: "#2E7D32"
+  style.font-size: 11
+  style.border-radius: 0
+}
+
+# TweaksPanel ← UploadPanel (controles)
+app.upload -> app.tweaks: "controles de display" {
+  style.stroke: "#90A4AE"
+  style.stroke-dash: 3
+  style.font-color: "#546E7A"
+  style.font-size: 11
+  style.border-radius: 0
+}

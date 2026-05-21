@@ -1,0 +1,27 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Upload y Análisis desde el Frontend
+|
+
+usuario: Usuario
+upload: UploadPanel\n(app.jsx)
+result: ResultPanel\n(app.jsx)
+api: Backend API\n(FastAPI)
+
+usuario -> upload: "Selecciona imagen\n(PNG / DICOM, max 50 MB)"
+upload -> upload: "Valida tamaño del archivo\nPrevisualiza imagen"
+usuario -> upload: "Selecciona modelo\n(vertebraprompt+boxrefiner+medsam)"
+usuario -> upload: "Clic en Analizar"
+upload -> upload: "Construye FormData:\n{file: <imagen>, model_name: <modelo>}"
+upload -> api: "POST /api/vertebraai/xrays\nAuthorization: Bearer {id_token}\nContent-Type: multipart/form-data"
+upload -> usuario: "Muestra spinner\nProcesando radiografía..."
+api -> upload: "200 OK: {study_id, mask:{data (base64 PNG),\ndimensions}, metrics:{confidence, detected_count,\nby_region, model_metrics:{dice:0.553, iou:0.45,\nlatency_ms}}, vertebrae:[{id, label, region,\ndetected, confidence, pixel_count, centroid, bbox}]}"
+upload -> result: "Pasa response al ResultPanel"
+result -> result: "Decodifica mask.data\n(base64 → Blob URL)\nRenderiza en <canvas>\nsobre imagen original"
+result -> result: "Actualiza MetricsPanel:\nDice=0.553 · IoU=0.45\ncervical 5/5 · thoracic 12/12 · lumbar 5/5"
+result -> result: "Actualiza VertebraTable:\n22 filas con id, región,\ndetectada, confianza, bbox"
+result -> usuario: "Resultado visible:\nimagen con máscara coloreada\n+ métricas + tabla de vértebras"
+
+api -> upload: "[Error] 429 Too Many Requests\n(límite 5/min alcanzado)"
+upload -> usuario: "Error: límite de solicitudes\nalcanzado. Intente en 1 minuto."

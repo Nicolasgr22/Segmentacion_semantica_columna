@@ -1,0 +1,128 @@
+direction: right
+
+title: |md
+  ## Infraestructura AWS — VertebraAI
+|
+
+internet: Internet {
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+  style.border-radius: 8
+
+  user: Usuario\n(Browser) {
+    shape: person
+    style.fill: "#CFD8DC"
+    style.stroke: "#546E7A"
+  }
+  dev: Developer\n(terraform apply) {
+    shape: person
+    style.fill: "#CFD8DC"
+    style.stroke: "#546E7A"
+  }
+}
+
+cdn: CDN / Edge {
+  style.fill: "#FFF8E1"
+  style.stroke: "#F57F17"
+  style.border-radius: 8
+
+  cf: CloudFront\nDistribution\n(HTTPS Edge Cache) {
+    shape: rectangle
+    style.fill: "#FFE082"
+    style.stroke: "#F57F17"
+    style.border-radius: 6
+  }
+}
+
+compute: Compute {
+  style.fill: "#E8F5E9"
+  style.stroke: "#2E7D32"
+  style.border-radius: 8
+
+  ec2: EC2 Spot\nt3.large (2vCPU / 8GB)\nFastAPI Container\n:8000 {
+    shape: rectangle
+    style.fill: "#A5D6A7"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+
+  ecr: ECR Repository\nmaia-proyecto-final-svc\n(Docker image ~3 GB) {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+}
+
+storage: Storage (S3) {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.border-radius: 8
+
+  s3_front: S3 Frontend\nanferiro-maia-proyecto-\nfinal-frontend\n(Public Website) {
+    shape: rectangle
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+
+  s3_models: S3 Models\nmaia-proyecto-final-models\n(Private, ~2 GB weights) {
+    shape: rectangle
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+
+  s3_state: S3 State\nanferiro-maia-proyecto-\nfinal-state\n(Terraform backend) {
+    shape: rectangle
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+    style.border-radius: 6
+  }
+}
+
+auth: Auth / Security {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.border-radius: 8
+
+  cognito: AWS Cognito\nUser Pool: vertebraai\n(JWT Authentication) {
+    shape: rectangle
+    style.fill: "#FFE0B2"
+    style.stroke: "#E65100"
+    style.border-radius: 6
+  }
+}
+
+iam: IAM {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.border-radius: 8
+
+  role: IAM Role\nmaia-proyecto-grado\n(EC2 Instance Profile) {
+    shape: rectangle
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+    style.border-radius: 6
+  }
+}
+
+# Traffic flow
+internet.user -> cdn.cf: "1. HTTPS"
+cdn.cf -> storage.s3_front: "2a. Path /*\n(archivos estáticos)"
+cdn.cf -> compute.ec2: "2b. Path /api/*\n(FastAPI)"
+
+# EC2 dependencies
+compute.ec2 -> compute.ecr: "3. docker pull\n(en startup)"
+compute.ec2 -> storage.s3_models: "4. Descarga pesos\n(~2 GB en startup)"
+compute.ec2 -> auth.cognito: "5. Valida JWT\nen cada request"
+
+# IAM grants
+iam.role -> compute.ec2: "attached to"
+iam.role -> compute.ecr: "grants: ecr:GetDownloadUrlForLayer\necr:BatchGetImage"
+iam.role -> storage.s3_models: "grants: s3:GetObject"
+
+# Terraform deployment
+internet.dev -> storage.s3_state: "lee/escribe estado\n(backend S3)"
+internet.dev -> cdn.cf: "terraform apply\nCloudFront invalidation"
+internet.dev -> storage.s3_front: "aws s3 sync\nfrontend files"

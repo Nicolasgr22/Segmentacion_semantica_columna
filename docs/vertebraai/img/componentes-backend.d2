@@ -1,0 +1,152 @@
+direction: down
+
+title: |md
+  ## Componentes Backend — Arquitectura Hexagonal (Ports & Adapters)
+|
+
+routers: "Capa de Entrada (Driving Side)\nFastAPI Routers" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#2E7D32"
+  style.border-radius: 8
+
+  r_vertebrae: "vertebrae.py\nPOST /xrays" {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+  r_auth: "auth.py\nPOST /auth/login | GET /auth/me" {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+  r_export: "export.py\nGET /xrays/{id}/exports" {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+  r_models: "models.py\nGET /models" {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+  r_health: "health.py\nGET /health" {
+    shape: rectangle
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 6
+  }
+}
+
+core: "Núcleo del Dominio\nUse Cases + Domain Entities" {
+  style.fill: "#F1F8E9"
+  style.stroke: "#33691E"
+  style.border-radius: 8
+
+  uc_analyze: "AnalyzeImageUseCase\n(analyze_image.py)" {
+    shape: rectangle
+    style.fill: "#DCEDC8"
+    style.stroke: "#33691E"
+    style.border-radius: 6
+  }
+  uc_export: "ExportResultUseCase\n(export_result.py)" {
+    shape: rectangle
+    style.fill: "#DCEDC8"
+    style.stroke: "#33691E"
+    style.border-radius: 6
+  }
+  uc_auth: "LoginUseCase\n(auth_use_case.py)" {
+    shape: rectangle
+    style.fill: "#DCEDC8"
+    style.stroke: "#33691E"
+    style.border-radius: 6
+  }
+  domain: "Domain Entities\nVertebraAnalysis · Vertebra\n(22 vértebras: C1-C7, T1-T12, L1-L5)" {
+    shape: rectangle
+    style.fill: "#F9FBE7"
+    style.stroke: "#827717"
+    style.border-radius: 6
+  }
+}
+
+adapters: "Capa de Salida (Driven Side)\nAdapters" {
+  style.fill: "#E0F7FA"
+  style.stroke: "#006064"
+  style.border-radius: 8
+
+  model_registry: "ModelRegistry\n(registry.py)" {
+    shape: rectangle
+    style.fill: "#B2EBF2"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+  a_vp: "VertebraPromptBoxRefinerMedSAMAdapter\n(DEFAULT)" {
+    shape: rectangle
+    style.fill: "#80DEEA"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+  a_unet: "UNetPPPatchesAdapter" {
+    shape: rectangle
+    style.fill: "#80DEEA"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+  a_seg: "SegFormerAdapter\n(experimental)" {
+    shape: rectangle
+    style.fill: "#80DEEA"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+  a_cognito: "CognitoAuthAdapter\n(cognito_auth_adapter.py)" {
+    shape: rectangle
+    style.fill: "#B2EBF2"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+  a_memory: "InMemoryAdapter\n(in_memory_adapter.py)" {
+    shape: rectangle
+    style.fill: "#B2EBF2"
+    style.stroke: "#006064"
+    style.border-radius: 6
+  }
+}
+
+external: "Sistemas Externos" {
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+  style.border-radius: 8
+
+  aws_cognito: "AWS Cognito" {
+    shape: rectangle
+    style.fill: "#FFE0B2"
+    style.stroke: "#E65100"
+    style.border-radius: 6
+  }
+  torch: "PyTorch\nMedSAM weights (~2 GB en EC2)" {
+    shape: rectangle
+    style.fill: "#E8EAF6"
+    style.stroke: "#3949AB"
+    style.border-radius: 6
+  }
+}
+
+routers.r_vertebrae -> core.uc_analyze: "invoca"
+routers.r_auth -> core.uc_auth: "invoca"
+routers.r_export -> core.uc_export: "invoca"
+
+core.uc_analyze -> adapters.model_registry: "ModelRegistry.get(model_name)"
+core.uc_export -> adapters.a_memory: "StoragePort.get(study_id)"
+core.uc_auth -> adapters.a_cognito: "AuthPort.authenticate()"
+core.uc_analyze -> adapters.a_memory: "StoragePort.save(analysis)"
+
+adapters.model_registry -> adapters.a_vp: "despacha (default)"
+adapters.model_registry -> adapters.a_unet: "despacha"
+adapters.model_registry -> adapters.a_seg: "despacha"
+
+adapters.a_cognito -> external.aws_cognito: "boto3 InitiateAuth"
+adapters.a_vp -> external.torch: "PyTorch inference\n(VertebraPrompt + BoxRefiner + MedSAM)"
+adapters.a_unet -> external.torch: "PyTorch inference\n(UNet++ EfficientNet-B7)"

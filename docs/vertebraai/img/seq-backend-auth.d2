@@ -1,0 +1,30 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Autenticación con AWS Cognito (Backend)
+|
+
+client: Cliente\n(Frontend)
+router: auth.py\n(Router)
+uc: LoginUseCase
+adapter: CognitoAuth\nAdapter
+cognito: AWS Cognito\nUser Pool
+
+client -> router: "POST /api/vertebraai/auth/login\n{username: str, password: str}"
+router -> router: "Valida request body\n(Pydantic LoginRequest)"
+router -> uc: "LoginUseCase.execute(username, password)"
+uc -> adapter: "CognitoAuthAdapter.authenticate(username, password)"
+adapter -> cognito: "boto3: client.initiate_auth(\n  AuthFlow=USER_PASSWORD_AUTH\n  AuthParameters={USERNAME, PASSWORD})"
+cognito -> adapter: "AuthenticationResult:\n{IdToken, AccessToken,\nRefreshToken, ExpiresIn: 3600}"
+adapter -> uc: "AuthResult DTO"
+uc -> router: "LoginResponse"
+router -> client: "200 OK: {id_token, access_token,\ntoken_type: Bearer, expires_in: 3600}"
+
+cognito -> adapter: "[Error] NotAuthorizedException"
+adapter -> uc: "raises AuthenticationError"
+uc -> router: "raises AuthenticationError"
+router -> client: "401 Unauthorized:\n{detail: Credenciales inválidas}"
+
+client -> router: "GET /api/vertebraai/auth/me\nAuthorization: Bearer {id_token}"
+router -> router: "get_current_user() DI:\ndecodes JWT via python-jose\nextracts claims {sub, username, email}"
+router -> client: "200 OK: {username, email, sub}"

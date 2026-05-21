@@ -1,0 +1,54 @@
+shape: sequence_diagram
+
+# ─── Actores coloreados por capa ───────────────────────────────
+usuario: "Usuario\n(Browser)" {
+  shape: person
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+}
+
+frontend: "VertebraAI SPA\nResultPanel — botón Export\nFrontend Layer" {
+  style.fill: "#BBDEFB"
+  style.stroke: "#1565C0"
+  style.font-color: "#1565C0"
+  style.bold: true
+}
+
+backend: "FastAPI App\nexport.py\nBackend Layer" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.font-color: "#2E7D32"
+  style.bold: true
+}
+
+usecase: "ExportResult\nUseCase" {
+  style.fill: "#DCEDC8"
+  style.stroke: "#33691E"
+  style.font-color: "#33691E"
+  style.bold: true
+}
+
+storage: "InMemory\nAdapter\nStorage Layer" {
+  style.fill: "#E1BEE7"
+  style.stroke: "#6A1B9A"
+  style.font-color: "#6A1B9A"
+  style.bold: true
+}
+
+# ─── Flujo de Exportación ──────────────────────────────────────
+usuario -> frontend: "1. Clic en Exportar\n     formato: png | mask | overlay | report"
+frontend -> backend: "2. GET /api/vertebraai/xrays/{study_id}/exports/{format}\n     Authorization: Bearer {id_token}"
+backend -> backend: "3. Valida JWT — get_current_user()\n     Valida format enum"
+backend -> usecase: "4. ExportResultUseCase.execute(\n     study_id, format, user)"
+usecase -> storage: "5. InMemoryAdapter.get(study_id)"
+storage -> usecase: "6. VertebraAnalysis\n     (resultados del estudio en RAM)"
+usecase -> usecase: "7. Convierte al formato:\n     png  → imagen original\n     mask → máscara binaria\n     overlay → imagen + máscara (blend)\n     report → JSON métricas completas"
+usecase -> backend: "8. ExportResult\n     {bytes, content_type, filename}"
+backend -> frontend: "9. FileResponse\n     Content-Disposition: attachment; filename={study_id}.{ext}\n     Content-Type: image/png | application/json"
+frontend -> usuario: "10. Descarga del archivo\n      en el navegador"
+
+# ─── Flujo de Error ────────────────────────────────────────────
+storage -> usecase: "— None (estudio no encontrado en memoria)"
+usecase -> backend: "— raises StudyNotFoundError"
+backend -> frontend: "— 404 Not Found\n     {detail: Estudio no encontrado.\n      El resultado puede haber expirado.}"
+frontend -> usuario: "— Muestra mensaje de error"

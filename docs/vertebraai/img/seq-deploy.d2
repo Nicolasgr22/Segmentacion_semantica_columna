@@ -1,0 +1,33 @@
+shape: sequence_diagram
+
+title: |md
+  ## Secuencia: Deployment Flow (terraform apply)
+|
+
+dev: Developer\n(local)
+tf: Terraform\nCLI
+ecr: AWS ECR
+s3_front: S3 Frontend\nBucket
+s3_models: S3 Models\nBucket
+ec2: AWS EC2\n(Spot)
+cf: AWS\nCloudFront
+cognito: AWS\nCognito
+
+dev -> tf: "terraform init\n(configura S3 backend\ndescarga providers)"
+dev -> tf: "terraform apply"
+tf -> cognito: "Crea Cognito User Pool vertebraai\nApp Client + usuario admin inicial"
+cognito -> tf: "user_pool_id, client_id"
+tf -> ecr: "Crea repositorio ECR\nmaia-proyecto-final-svc"
+tf -> tf: "docker build services/\n(imagen CPU-only PyTorch, ~3 GB)"
+tf -> ecr: "docker push\n{ecr_url}/maia-proyecto-final-svc:latest"
+tf -> ec2: "Lanza EC2 Spot t3.large\ncon IAM Role + user_data.sh"
+ec2 -> ecr: "docker pull\n{ecr_url}/maia-proyecto-final-svc:latest"
+ec2 -> s3_models: "Descarga pesos de modelos\n(~2 GB: MedSAM, UNet++)"
+ec2 -> ec2: "docker run -p 8000:8000\n-e COGNITO_USER_POOL_ID=...\n-e MODEL_DEVICE=cpu\n-v /models:/app/model-pkg"
+ec2 -> tf: "Instancia lista\n(HTTP 200 en /api/vertebraai/health)"
+tf -> s3_front: "aws s3 sync frontend/\ns3://frontend-bucket/\n(index.html, app.jsx, styles.css)"
+tf -> s3_front: "Genera y sube config.js:\nwindow.BACKEND_URL = ''"
+tf -> cf: "aws cloudfront create-invalidation\n--paths '/*'"
+cf -> s3_front: "Refresca caché del frontend"
+tf -> dev: "Outputs:\nfrontend_cloudfront_url = https://xxx.cloudfront.net\nservice_health_check = curl .../health\ncognito_client_id = ...\nmodels_reader_access_key_id = ..."
+dev -> dev: "Sistema disponible\nhttps://xxx.cloudfront.net"
