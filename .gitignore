@@ -68,4 +68,4 @@ frontend/config.js
 *.tfstate.lock.info
 .claude
 
-terraform.tfstate
+terraform.tfstate*
