@@ -376,12 +376,12 @@ La infraestructura completa se provisiona con Terraform sobre **AWS us-east-1**.
 | S3 Bucket (frontend) | `anferiro-maia-proyecto-final-frontend` | Hosting estático del frontend |
 | S3 Bucket (state) | `anferiro-maia-proyecto-final-state` | Backend remoto del estado de Terraform |
 | CloudFront | distribución única | HTTPS, caché, enruta `/api/*` al EC2 y `/*` al S3 |
-| EC2 Spot | `t3.large` (8 GB RAM / 2 vCPU) | Corre el contenedor FastAPI + MedSAM |
+| EC2 On-Demand | `t3.large` (8 GB RAM / 2 vCPU) | Corre el contenedor FastAPI + MedSAM |
 | ECR | `vertebraai` | Registro Docker privado de la imagen del servicio |
 | IAM User | `maia-proyecto-user` | Usuario de despliegue |
 | IAM Role | `maia-proyecto-grado` | Role con permisos del proyecto |
 
-> **Spot instance:** sin EIP fija — si AWS reclama el spot, un nuevo `terraform apply` levanta otra instancia y CloudFront apunta a la nueva IP automáticamente.
+> **On-Demand instance:** sin EIP fija — la instancia On-Demand no es reclamada por AWS, por lo que el servicio permanece disponible de forma continua. Si se requiere reemplazar la instancia, un `terraform apply` lanza una nueva y CloudFront apunta a la nueva IP automáticamente.
 
 #### Pre-requisitos
 
@@ -418,7 +418,7 @@ terraform apply
 El apply ejecuta en orden:
 1. Crea S3, ECR, Security Groups y distribución CloudFront
 2. Construye la imagen Docker y la sube al ECR
-3. Lanza la instancia EC2 Spot que arranca el contenedor vía `user_data`
+3. Lanza la instancia EC2 On-Demand que arranca el contenedor vía `user_data`
 4. Genera `frontend/config.js` con `window.BACKEND_URL = ""` (ruta relativa vía CloudFront)
 5. Sincroniza `frontend/` al bucket S3 e invalida la caché de CloudFront
 

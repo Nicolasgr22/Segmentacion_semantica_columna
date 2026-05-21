@@ -69,7 +69,7 @@ Este documento cubre:
 - La **arquitectura de la aplicación frontend** (React SPA) que permite la interacción con el sistema
 - La **arquitectura del servicio backend** (FastAPI, arquitectura hexagonal) que expone las APIs de autenticación, análisis y exportación
 - Los **modelos de IA** integrados en el backend: VertebraPrompt-Net + BoxRefiner +MedSAM ViT-B y UNet++ EfficientNet-B7
-- La **infraestructura en la nube** (AWS) aprovisionada mediante Terraform: CloudFront, EC2 Spot, ECR, S3, Cognito e IAM
+- La **infraestructura en la nube** (AWS) aprovisionada mediante Terraform: CloudFront, EC2 On-Demand, ECR, S3, Cognito e IAM
 - Los **flujos E2E** de autenticación, análisis de rayos X y exportación de resultados
 - Los **principios de arquitectura** que rigen el diseño de la solución
 - La **configuración** de cada capa y sus variables clave
@@ -106,7 +106,7 @@ Este documento cubre:
 | OA-003 | Seguridad de acceso al endpoint de análisis | Autenticación con AWS Cognito (JWT IdToken); rate limiting con SlowAPI (5/min en `/xrays`); CORS configurable |
 | OA-004 | Despliegue reproducible y declarativo de la infraestructura | Toda la infraestructura AWS está definida en Terraform; un `terraform apply` recrea el entorno completo |
 | OA-005 | Facilidad de mantenimiento y prueba del backend | Arquitectura hexagonal permite pruebas unitarias sin GPU (los adapters pueden ser mockeados); cobertura objetivo ≥ 80% |
-| OA-006 | Bajo costo operativo en entorno académico | EC2 Spot t3.large (ahorro ~60-70% vs on-demand); CloudFront + S3 para frontend (~$0 a escala académica) |
+| OA-006 | Bajo costo operativo en entorno académico | EC2 On-Demand t3.large (~$60/mes en us-east-1); CloudFront + S3 para frontend (~$0 a escala académica) |
 
 ### 3.3 Análisis
 
@@ -186,7 +186,7 @@ La solución se estructura en cuatro capas principales: Security Layer (Cognito)
 El usuario accede a la aplicación via HTTPS a través de **CloudFront**, que actúa como punto único de entrada:
 
 - Las peticiones a `/*` son servidas desde el **bucket S3** que contiene los archivos estáticos del frontend (index.html, app.jsx, styles.css)
-- Las peticiones a `/api/*` son enrutadas al **EC2 Spot** donde corre el contenedor Docker del backend FastAPI
+- Las peticiones a `/api/*` son enrutadas al **EC2 On-Demand** donde corre el contenedor Docker del backend FastAPI
 
 La **autenticación** es gestionada por AWS Cognito, que emite JWT (IdToken) validados por el backend en cada petición autenticada (`AUTH_ENABLED=true` hardcodeado en `user_data.sh.tpl`). Los **pesos de los modelos ML** (~2 GB, checkpoints de VertebraPrompt-Net, BoxRefiner y MedSAM) se empaquetan dentro de la imagen Docker durante el `docker build` (`COPY model-pkg/ ./model-pkg/`) y llegan al EC2 a través de ECR vía `docker pull`. El bucket S3 `maia-proyecto-final-models` existe para distribución externa de checkpoints (acceso de solo lectura para colaboradores), pero **no interviene en el arranque del servicio**.
 
@@ -448,7 +448,7 @@ La infraestructura de VertebraAI se aprovisiona completamente mediante Terraform
 | **S3 Bucket** | `anferiro-maia-proyecto-final-state` | Backend remoto de Terraform (estado de infraestructura) |
 | **S3 Bucket** | `maia-proyecto-final-models` | Distribución externa de checkpoints ML (~2 GB). Acceso de solo lectura vía IAM user `models-reader`. **No se usa en el arranque del EC2** — los pesos van empaquetados en la imagen Docker. |
 | **CloudFront** | Distribución auto-nombrada | CDN HTTPS; enruta `/*` a S3 y `/api/*` a EC2; cache de archivos estáticos |
-| **EC2 Spot** | `t3.large` (2 vCPU / 8 GB RAM) | Ejecuta el contenedor Docker del backend FastAPI |
+| **EC2 On-Demand** | `t3.large` (2 vCPU / 8 GB RAM) | Ejecuta el contenedor Docker del backend FastAPI |
 | **ECR** | `maia-proyecto-final-svc` | Registro privado de la imagen Docker del servicio |
 | **Security Group** | Auto-creado | Reglas de firewall: permite puertos 80/443 inbound |
 | **IAM Role** | `maia-proyecto-grado` | Rol asignado al EC2: permite `ecr:GetDownloadUrlForLayer` / `ecr:BatchGetImage` para hacer `docker pull` desde ECR |
@@ -464,7 +464,7 @@ La infraestructura de VertebraAI se aprovisiona completamente mediante Terraform
 | `outputs.tf` | Outputs: URL CloudFront, health check, ECR URL, Cognito IDs |
 | `s3_frontend.tf` | Bucket frontend + política pública + provisioner `aws s3 sync` + generador `config.js` |
 | `s3_models.tf` | Bucket de modelos + usuario IAM de solo lectura para distribución |
-| `services_ec2.tf` | EC2 Spot + ECR + security groups + Docker build/push + user_data |
+| `services_ec2.tf` | EC2 On-Demand + ECR + security groups + Docker build/push + user_data |
 | `cloudfront.tf` | Distribución CloudFront + políticas de caché + grupos de origen |
 | `iam.tf` | IAM Role + instance profile + permisos ECR y S3 |
 | `cognito.tf` | User Pool + App Client + usuario admin inicial |
@@ -635,9 +635,9 @@ El frontend se despliega como archivos estáticos en **S3** con hosting web habi
 
 #### 5.1.2 Arquitectura Backend
 
-El backend corre en un **EC2 Spot t3.large** dentro de un contenedor Docker. El proceso de inicio (`user_data.sh.tpl`) hace únicamente `docker pull` desde **ECR** y lanza el contenedor — los pesos de los modelos ML viajan dentro de la imagen (empaquetados en el `docker build` vía `COPY model-pkg/`). No se descarga nada desde S3 en el arranque.
+El backend corre en un **EC2 On-Demand t3.large** dentro de un contenedor Docker. El proceso de inicio (`user_data.sh.tpl`) hace únicamente `docker pull` desde **ECR** y lanza el contenedor — los pesos de los modelos ML viajan dentro de la imagen (empaquetados en el `docker build` vía `COPY model-pkg/`). No se descarga nada desde S3 en el arranque.
 
-**No se usa ALB/NLB:** CloudFront apunta directamente a la IP del EC2. Si el Spot es reclamado, un nuevo `terraform apply` lanza una instancia con nueva IP y actualiza la distribución CloudFront.
+**No se usa ALB/NLB:** CloudFront apunta directamente a la IP del EC2. Al tratarse de una instancia On-Demand, AWS no la reclama de forma inesperada; el servicio permanece disponible de forma continua sin intervención manual.
 
 **Configuración del contenedor en producción:**
 ```bash
@@ -691,7 +691,7 @@ AWS Cognito gestiona el ciclo de vida de las sesiones:
 | **Contenedores** | Docker | 24+ | Containerización del servicio |
 | **IaC** | Terraform | 1.5+ | Provisioning declarativo de infraestructura |
 | **CDN** | AWS CloudFront | Managed | Distribución de contenido + proxy de API |
-| **Cómputo** | AWS EC2 Spot | t3.large | Ejecución del contenedor del servicio |
+| **Cómputo** | AWS EC2 On-Demand | t3.large | Ejecución del contenedor del servicio |
 | **Registry** | AWS ECR | Managed | Registro privado de imágenes Docker |
 | **Object Store** | AWS S3 | Managed | Frontend estático + pesos de modelos |
 | **Testing** | pytest | 7+ | Framework de pruebas unitarias |
