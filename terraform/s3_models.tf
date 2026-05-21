@@ -3,8 +3,8 @@
 # usa el endpoint /xrays. Acceso de solo lectura via IAM user models-reader.
 #
 # Estructura esperada:
-#   xrays/medsam/   → archivos .pt / .pth de MedSAM
-#   xrays/unetpp/   → checkpoint de UNet++ EfficientNet-B7
+#   models/medsam/   → archivos .pt / .pth de MedSAM
+#   models/unetpp/   → checkpoint de UNet++ EfficientNet-B7
 
 resource "aws_s3_bucket" "models" {
   bucket        = "${var.project_name}-models"

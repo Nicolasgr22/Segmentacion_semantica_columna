@@ -113,12 +113,12 @@ output "models_reader_secret_key" {
 output "models_upload_command" {
   description = "Comando para subir los modelos al bucket (ejecutar desde la raíz del proyecto)"
   value       = <<-EOT
-    aws s3 cp services/model-pkg/medsam/  s3://${aws_s3_bucket.models.bucket}/xrays/medsam/  --recursive
-    aws s3 cp services/model-pkg/unet++_patches/ s3://${aws_s3_bucket.models.bucket}/xrays/unetpp/ --recursive
+    aws s3 cp services/model-pkg/medsam/  s3://${aws_s3_bucket.models.bucket}/models/medsam/  --recursive
+    aws s3 cp services/model-pkg/unet++_patches/ s3://${aws_s3_bucket.models.bucket}/models/unetpp/ --recursive
   EOT
 }
 
 output "models_download_command" {
   description = "Comando que puede usar quien reciba las credenciales para descargar los modelos"
-  value       = "aws s3 cp s3://${aws_s3_bucket.models.bucket}/xrays/ ./models/ --recursive"
+  value       = "aws s3 cp s3://${aws_s3_bucket.models.bucket}/models/ ./models/ --recursive"
 }

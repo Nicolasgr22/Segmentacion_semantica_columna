@@ -20,19 +20,37 @@ Sistema de segmentación semántica de columna vertebral en radiografías que de
 
 ## Tabla de contenidos
 
-- [Estructura del repositorio](#estructura-del-repositorio)
-- [Pre-requisitos](#pre-requisitos)
-- [Instalación](#instalación)
-- [Uso básico](#uso-básico)
-- [Frontend](#frontend)
-- [Modelos y experimentos](#modelos-y-experimentos)
-- [Pruebas](#pruebas)
+- [Descripción del proyecto](#descripción-del-proyecto)
+  - [Frontend](#frontend)
+  - [Modelos y experimentos](#modelos-y-experimentos)
+- [Dependencias](#dependencias)
+- [Entorno de ejecución](#entorno-de-ejecución)
+- [Pasos de despliegue](#pasos-de-despliegue)
+  - [Backend (local)](#backend-local)
+  - [Backend (Docker)](#backend-docker)
+  - [Frontend (local)](#frontend-local)
+  - [AWS (Terraform)](#aws-terraform)
+- [Credenciales de ejemplo](#credenciales-de-ejemplo)
+- [Ejemplos de uso](#ejemplos-de-uso)
+  - [Pruebas](#pruebas)
 - [Contribución](#contribución)
 - [Licencia](#licencia)
 
 ---
 
-## Estructura del repositorio
+## Descripción del proyecto
+
+> [!IMPORTANT]
+> **Carpetas obligatorias para la entrega del proyecto:**
+>
+> | Carpeta | Ubicación | Contenido esperado |
+> |---------|----------|--------------------|
+> | `Notebooks/` | [`notebooks/`](notebooks/) — en este repositorio | Cuadernos con análisis, entrenamiento y pruebas |
+> | `Modelos/` | `s3://maia-proyecto-final-models/models/` — **no se encuentra en el repositorio git por restricciones de tamaño** | Archivo(s) del modelo final guardado (`.pt`) |
+> | `Datos/` | [`notebooks/medsam_pipeline/results_summary/`](notebooks/medsam_pipeline/results_summary/) — en este repositorio | Muestras o estructura de los datos usados |
+>
+> Para descargar los modelos: `aws s3 cp s3://maia-proyecto-final-models/models/ ./models/ --recursive --profile vertebraai-models`
+> (credenciales de solo lectura disponibles en la sección [Credenciales de ejemplo](#credenciales-de-ejemplo))
 
 Este es un repositorio **monorepo** que agrupa los tres componentes del proyecto bajo un mismo control de versiones: la investigación experimental (notebooks), el servicio de inferencia (backend), la interfaz de usuario (frontend) y la infraestructura (terraform). Cada componente tiene su propio ciclo de vida, dependencias y documentación, pero comparten el mismo dataset, los mismos checkpoints de referencia y la misma nomenclatura de métricas.
 
@@ -87,9 +105,188 @@ Segmentacion_semantica_columna/
 └── .gitignore
 ```
 
+### Frontend
+
+Interfaz React de página única desplegada en **AWS S3 Static Website Hosting**.
+
+- Subida de radiografías en formato PNG
+- Visualización de máscara de segmentación superpuesta
+- Panel de ajuste de opacidad y visualización por vértebra
+- Comparación simultánea de múltiples modelos
+
+> Para instrucciones de desarrollo local, estructura de componentes y despliegue del frontend, ver:
+> - [`frontend/README.md`](frontend/README.md) — guía completa del frontend
+
+### Modelos y experimentos
+
+El entrenamiento y la experimentación se gestionan con **MLflow** sobre **Databricks Community Edition**.
+
+| Parámetro | Valor |
+|-----------|-------|
+| `DATABRICKS_HOST` | `https://dbc-250dea69-0463.cloud.databricks.com` |
+| `MLFLOW_EXPERIMENT_NAME` | `/Users/anferiro@gmail.com/columna-vertebral-medsam` |
+| Pipeline final | `VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B` |
+| Dataset | MaIA Scoliosis — radiografías AP y lateral |
+
+#### Notebooks de investigación
+
+| Notebook | Descripción |
+|----------|-------------|
+| [`01-recoleccion-preparacion-datos.ipynb`](notebooks/01-recoleccion-preparacion-datos.ipynb) | Recolección, exploración y preparación del dataset |
+| [`prueba inicial multiclase preliminar SAM.ipynb`](notebooks/prueba%20inicial%20multiclase%20preliminar%20SAM.ipynb) | Prueba de concepto inicial con SAM multiclase |
+| [`unet/`](notebooks/unet/) | Experimentos con U-Net base y variantes robustas |
+| [`unet++/`](notebooks/unet++/) | Experimentos con U-Net++ y enfoque por patches |
+| [`medsam_pipeline/notebooks/`](notebooks/medsam_pipeline/notebooks/) | Pipeline completo MedSAM: baseline → NN-SAM → estrategia ganadora |
+
+La evolución del proyecto sigue esta trayectoria:
+
+```
+Preparación de datos
+  → Baseline binario
+  → U-Net / U-Net++ multiclase
+  → Detección automática de cajas (CenterNetLite)
+  → NN-SAM + MedSAM como base robusta
+  → VertebraPrompt + BoxRefiner  ← estrategia ganadora
+```
+
+Los pesos `.pt` no se versionan por tamaño. Ver [`notebooks/medsam_pipeline/checkpoints/README.md`](notebooks/medsam_pipeline/checkpoints/) para la correspondencia entre notebooks y checkpoints.
+
 ---
 
-## Pre-requisitos
+## Dependencias
+### Declaradas (desde el manifest)
+
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+- `serve` ^14.2.4 (npm) *(dev)*
+- `fastapi` >=0.111.0 (pypi)
+- `uvicorn` >=0.30.0 (pypi)
+- `python-multipart` >=0.0.9 (pypi)
+- `pydantic` >=2.7.0 (pypi)
+- `pydantic-settings` >=2.3.0 (pypi)
+- `transformers` >=4.40.0 (pypi)
+- `torch` >=2.1.0 (pypi)
+- `torchvision` >=0.16.0 (pypi)
+- `Pillow` >=10.3.0 (pypi)
+- `opencv-python-headless` >=4.9.0.80 (pypi)
+- `numpy` >=1.26.0 (pypi)
+- `albumentations` >=1.4.0 (pypi)
+- `pytest` >=8.0.0 (pypi) *(dev)*
+- `pytest-asyncio` >=0.23.0 (pypi) *(dev)*
+- `httpx` >=0.27.0 (pypi) *(dev)*
+- `pytest-cov` >=5.0.0 (pypi) *(dev)*
+
+**Grupo de dependencias:**
+- **Web API & Serving:** `fastapi`, `uvicorn`, `python-multipart` — handle HTTP requests and image uploads for the segmentation service.
+- **Deep Learning:** `torch`, `torchvision`, `transformers` — load and execute PyTorch segmentation models.
+- **Image Processing & Augmentation:** `opencv-python-headless`, `Pillow`, `albumentations`, `numpy` — preprocess, augment, and manipulate radiograph images.
+- **Data Validation & Configuration:** `pydantic`, `pydantic-settings` — enforce API contracts and manage runtime settings.
+- **Testing:** `pytest`, `pytest-asyncio`, `httpx`, `pytest-cov` — run async tests, exercise HTTP endpoints, and measure coverage.
+- **Static File Serving (Dev):** `serve` — npm dev dependency for local static asset serving.
+
+---
+
+## Entorno de ejecución
 
 | Componente | Versión mínima |
 |------------|----------------|
@@ -108,7 +305,7 @@ Los checkpoints del modelo (~2 GB) no se incluyen en el repositorio ya que por e
 
 ---
 
-## Instalación
+## Pasos de despliegue
 
 ### Backend (local)
 
@@ -249,7 +446,39 @@ terraform taint null_resource.deploy_image && terraform apply
 
 ---
 
-## Uso básico
+## Credenciales de ejemplo
+
+Los checkpoints de **MedSAM ViT-B** y **UNet++ EfficientNet-B7** usados en producción están disponibles en un bucket S3 privado.
+
+| Campo | Valor |
+|-------|-------|
+| Bucket | `s3://maia-proyecto-final-models` |
+| Ruta modelos | `s3://maia-proyecto-final-models/models/` |
+| Región | `us-east-1` |
+| AWS Access Key ID | `AKIAZQ3DPKVWU4CKQKNG` |
+| AWS Secret Access Key | *(ver nota abajo — se comparte por canal seguro)* |
+
+```bash
+# Configurar credenciales de solo lectura
+aws configure --profile vertebraai-models
+# AWS Access Key ID: AKIAZQ3DPKVWU4CKQKNG
+# AWS Secret Access Key: <solicitar por canal seguro>
+# Default region: us-east-1
+
+# Descargar todos los modelos
+aws s3 cp s3://maia-proyecto-final-models/models/ ./models/ --recursive --profile vertebraai-models
+
+# Verificar contenido
+aws s3 ls s3://maia-proyecto-final-models/models/ --recursive --profile vertebraai-models
+```
+
+> Las credenciales tienen permisos de **solo lectura** sobre este bucket. No pueden escribir ni eliminar archivos.
+
+> **Secret Key:** no se publica en este repositorio. Si necesitas el `AWS Secret Access Key` para descargar los modelos, escríbenos a [af.rinconr1@uniandes.edu.co](mailto:af.rinconr1@uniandes.edu.co) y te lo enviamos por correo.
+
+---
+
+## Ejemplos de uso
 
 ### Analizar una radiografía
 
@@ -272,56 +501,11 @@ curl -X POST http://localhost:8000/api/vertebraai/xrays \
 
 Especificación completa: [`services/openapi/vertebraAI.yml`](services/openapi/vertebraAI.yml)
 
----
+> Para ejemplos de respuesta, variables de entorno, arquitectura interna y guía de desarrollo del backend, ver la documentación detallada:
+> - [`services/README.md`](services/README.md) — guía completa del servicio
+> - [`services/docs/ARCHITECTURE.md`](services/docs/ARCHITECTURE.md) — diseño de capas, puertos y adaptadores
 
-## Frontend
-
-Interfaz React de página única desplegada en **AWS S3 Static Website Hosting**.
-
-- Subida de radiografías en formato PNG
-- Visualización de máscara de segmentación superpuesta
-- Panel de ajuste de opacidad y visualización por vértebra
-- Comparación simultánea de múltiples modelos
-
----
-
-## Modelos y experimentos
-
-El entrenamiento y la experimentación se gestionan con **MLflow** sobre **Databricks Community Edition**.
-
-| Parámetro | Valor |
-|-----------|-------|
-| `DATABRICKS_HOST` | `https://dbc-250dea69-0463.cloud.databricks.com` |
-| `MLFLOW_EXPERIMENT_NAME` | `/Users/anferiro@gmail.com/columna-vertebral-medsam` |
-| Pipeline final | `VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B` |
-| Dataset | MaIA Scoliosis — radiografías AP y lateral |
-
-### Notebooks de investigación
-
-| Notebook | Descripción |
-|----------|-------------|
-| [`01-recoleccion-preparacion-datos.ipynb`](notebooks/01-recoleccion-preparacion-datos.ipynb) | Recolección, exploración y preparación del dataset |
-| [`prueba inicial multiclase preliminar SAM.ipynb`](notebooks/prueba%20inicial%20multiclase%20preliminar%20SAM.ipynb) | Prueba de concepto inicial con SAM multiclase |
-| [`unet/`](notebooks/unet/) | Experimentos con U-Net base y variantes robustas |
-| [`unet++/`](notebooks/unet++/) | Experimentos con U-Net++ y enfoque por patches |
-| [`medsam_pipeline/notebooks/`](notebooks/medsam_pipeline/notebooks/) | Pipeline completo MedSAM: baseline → NN-SAM → estrategia ganadora |
-
-La evolución del proyecto sigue esta trayectoria:
-
-```
-Preparación de datos
-  → Baseline binario
-  → U-Net / U-Net++ multiclase
-  → Detección automática de cajas (CenterNetLite)
-  → NN-SAM + MedSAM como base robusta
-  → VertebraPrompt + BoxRefiner  ← estrategia ganadora
-```
-
-Los pesos `.pt` no se versionan por tamaño. Ver [`notebooks/medsam_pipeline/checkpoints/README.md`](notebooks/medsam_pipeline/checkpoints/) para la correspondencia entre notebooks y checkpoints.
-
----
-
-## Pruebas
+### Pruebas
 
 Las pruebas se ejecutan **sin GPU ni checkpoints reales** — todos los puertos externos están mockeados.
 
@@ -354,5 +538,3 @@ Cobertura objetivo: ≥ 80 %
 ## Licencia
 
 Proyecto académico — Universidad de los Andes, MaIA 2026. Uso restringido a fines educativos e investigativos.
-
-
