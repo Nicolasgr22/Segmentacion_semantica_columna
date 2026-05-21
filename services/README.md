@@ -11,7 +11,7 @@
 
 Microservicio de segmentación automática de columna vertebral en radiografías, desarrollado como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** — Universidad de los Andes, 2026.
 
-Expone tres modelos de segmentación detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). El **pipeline ganador** (`VertebraPrompt-Net + BoxRefiner + MedSAM`, notebook 06) se carga como modelo por defecto. Detecta y segmenta hasta **17 vértebras** (T1-T12, L1-L5) en radiografías AP en formato PNG o JPEG.
+Expone dos modelos de segmentación detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). El **pipeline ganador** (`VertebraPrompt-Net + BoxRefiner + MedSAM`, notebook 06) se carga como modelo por defecto. Detecta y segmenta hasta **17 vértebras** (T1-T12, L1-L5) en radiografías AP en formato PNG o JPEG.
 
 ---
 
@@ -67,10 +67,10 @@ Imagen PNG o JPEG (≥ 32×32 px, cualquier tamaño)
 
 ### Modelos disponibles
 
-| Valor `model` | Descripción | Dice estricto (test) |
-|---------------|-------------|----------------------|
-| `medsam` _(por defecto)_ | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned (pipeline ganador, notebook 06) | **0.5530** |
-| `unetpp-patches` | UNet++ encoder EfficientNet-B7, ventana deslizante 128×128 | 0.4711 |
+| Valor `model` | Descripción | Métricas |
+|---------------|-------------|----------|
+| `medsam` _(por defecto)_ | VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B fine-tuned (pipeline ganador, notebook 06) | `GET /api/vertebraai/models/medsam` |
+| `unetpp-patches` | UNet++ encoder EfficientNet-B7, ventana deslizante 128×128 | `GET /api/vertebraai/models/unetpp-patches` |
 
 ### Arquitectura interna
 
@@ -208,29 +208,60 @@ Para el despliegue completo en AWS, ver [`../terraform/`](../terraform/) y la se
 
 ## Variables de entorno
 
-Todas las variables se leen desde `.env` (o del entorno del proceso). Copiar `.env.example` como punto de partida.
+Todas las variables se leen desde el archivo `.env` ubicado en `services/` o directamente del entorno del proceso (variables de entorno del sistema o del contenedor Docker). La configuración es gestionada por [`app/config.py`](app/config.py) usando `pydantic-settings`, que valida tipos y aplica los valores por defecto automáticamente.
+
+```bash
+# Punto de partida para configuración local
+cp services/.env.example services/.env
+```
+
+### Servidor
 
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
-| `DEBUG` | Activa Swagger UI / ReDoc y modo debug de FastAPI | `false` |
+| `DEBUG` | Activa Swagger UI (`/api/docs`), ReDoc (`/api/redoc`) y modo debug de FastAPI. **No activar en producción.** | `false` |
 | `HOST` | Dirección de escucha del servidor | `0.0.0.0` |
 | `PORT` | Puerto del servidor | `8000` |
-| `MODEL_DEVICE` | Dispositivo de inferencia: `cpu`, `cuda`, `mps` | `cpu` |
-| `MODEL_INPUT_SIZE` | Resolución interna de entrada al modelo | `512` |
+
+### Modelo e inferencia
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
+| `MODEL_DEVICE` | Dispositivo de inferencia: `cpu`, `cuda` o `mps` | `cpu` |
+| `MODEL_INPUT_SIZE` | Resolución interna de entrada al modelo (píxeles) | `512` |
+| `MAX_UPLOAD_MB` | Tamaño máximo de imagen aceptada en MB | `50` |
+| `INFERENCE_TIMEOUT_S` | Timeout de inferencia en segundos | `60` |
+
+### Checkpoints de los modelos
+
+Rutas relativas al directorio `services/`. Si los modelos se montan en otra ubicación (p. ej. volumen Docker), ajustar estas variables.
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
 | `MEDSAM_PROMPT_NET_CHECKPOINT` | Checkpoint de VertebraPrompt-Net | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` |
 | `MEDSAM_BOX_REFINER_CHECKPOINT` | Checkpoint de BoxRefiner | `model-pkg/medsam/box_refiner_best.pt` |
 | `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/medsam/medsam_vit_b.pth` |
 | `MEDSAM_FINETUNED_CHECKPOINT` | Checkpoint MedSAM fine-tuned (decoder + encoder parcial) | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` |
 | `UNETPP_PATCHES_CHECKPOINT` | Checkpoint UNet++ con ventana deslizante | `model-pkg/unet++_patches/unet++_patches.pth` |
-| `MAX_UPLOAD_MB` | Tamaño máximo de imagen aceptada (MB) | `50` |
-| `INFERENCE_TIMEOUT_S` | Timeout de inferencia (segundos) | `60` |
-| `CORS_ORIGINS` | Orígenes permitidos (lista JSON) | `["*"]` |
-| `RATE_LIMIT_DEFAULT` | Límite de tasa para endpoints generales | `120/minute` |
-| `RATE_LIMIT_ANALYZE` | Límite de tasa para el endpoint de análisis | `5/minute` |
-| `AUTH_ENABLED` | Activa la validación de tokens Cognito | `true` |
+
+### Seguridad y acceso
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
+| `CORS_ORIGINS` | Orígenes HTTP permitidos (lista JSON). Usar dominios específicos en producción. | `["*"]` |
+| `RATE_LIMIT_DEFAULT` | Límite de tasa global para todos los endpoints | `120/minute` |
+| `RATE_LIMIT_ANALYZE` | Límite de tasa estricto para `POST /xrays` (inferencia consume CPU/RAM por ~30 s) | `5/minute` |
+| `AUTH_ENABLED` | Activa validación de tokens Cognito. Poner `false` para desarrollo local sin Cognito. | `true` |
+
+### Autenticación (AWS Cognito)
+
+Solo necesarias cuando `AUTH_ENABLED=true`. Los valores corresponden al User Pool del proyecto.
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
 | `COGNITO_USER_POOL_ID` | ID del User Pool de AWS Cognito | `us-east-1_M9mJH2Qim` |
-| `COGNITO_CLIENT_ID` | Client ID de la app Cognito | `5am1u0928s7p69vor1rbpt4qg7` |
-| `COGNITO_REGION` | Región AWS de Cognito | `us-east-1` |
+| `COGNITO_CLIENT_ID` | Client ID de la aplicación web en Cognito | `5am1u0928s7p69vor1rbpt4qg7` |
+| `COGNITO_REGION` | Región AWS donde está el User Pool | `us-east-1` |
 
 ---
 

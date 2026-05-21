@@ -1,106 +1,227 @@
-# VertebraAI Frontend
+# VertebraAI — Frontend
 
-SPA en React 18 + Babel standalone (sin build step) que consume el servicio
-`services/` para mostrar análisis de radiografías de columna.
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Babel](https://img.shields.io/badge/Babel-Standalone-F9DC3E?logo=babel&logoColor=black)](https://babeljs.io/)
+[![AWS S3](https://img.shields.io/badge/AWS-S3%20Static%20Hosting-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/s3/)
+[![License](https://img.shields.io/badge/License-Académica%20Uniandes-004B87)](https://uniandes.edu.co/)
 
-## Pipeline conectado
+> **Aviso clínico:** Esta herramienta es un apoyo diagnóstico exclusivamente. Toda decisión clínica debe ser revisada por un radiólogo o especialista cualificado.
 
-El frontend está alineado con el pipeline ganador del notebook 06:
+SPA (Single Page Application) en React 18 + Babel standalone — sin paso de build — que consume el servicio `services/` para análisis automático de radiografías de columna vertebral. Desarrollada como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** — Universidad de los Andes, 2026.
 
-```
-[ Subir imagen PNG/JPEG ]
-       │
-       ▼
-POST http://localhost:8000/api/vertebraai/xrays
-       │
-       ▼
-[ VertebraPrompt-Net + BoxRefiner + MedSAM ViT-B ]
-       │
-       ▼
-Resultados: máscara base64 + métricas + 22 vértebras (C3-L5)
-```
+---
 
-## Cómo correr el frontend
+## Tabla de contenidos
 
-El backend tiene CORS habilitado para `http://localhost:5500` y `http://127.0.0.1:5500`.
+- [Descripción del frontend](#descripción-del-frontend)
+  - [Funcionalidades](#funcionalidades)
+  - [Estructura](#estructura)
+- [Dependencias](#dependencias)
+- [Entorno de ejecución](#entorno-de-ejecución)
+- [Pasos de despliegue](#pasos-de-despliegue)
+  - [Local](#local)
+  - [Producción (AWS S3 + CloudFront)](#producción-aws-s3--cloudfront)
+- [Configuración](#configuración)
+  - [URL del backend](#url-del-backend)
+  - [Apariencia](#apariencia)
+- [Credenciales de ejemplo](#credenciales-de-ejemplo)
+- [Ejemplos de uso](#ejemplos-de-uso)
+- [Contribución](#contribución)
+- [Licencia](#licencia)
 
-```bash
-# 1. Asegúrate de que el backend esté corriendo (en otro terminal)
-cd services
-docker run -p 8000:8000 --name vertebraai vertebraai
-# o:  uvicorn app.main:app --reload
+---
 
-# 2. Servir el frontend en localhost:5500 (elige una opción)
+## Descripción del frontend
 
-# Opción A — npm scripts (recomendado)
-cd frontend
-npm install              # instala 'serve' localmente (solo la primera vez)
-npm start                # corre serve . -l 5500
+Interfaz web estática que no requiere servidor de aplicaciones ni proceso de compilación. Los archivos se sirven directamente desde cualquier servidor HTTP estático (S3, `serve`, Python, nginx). React y Babel se cargan desde CDN con integridad SRI verificada.
 
-# Opción B — sin instalar nada (usa npx)
-cd frontend
-npx serve . -l 5500
+### Funcionalidades
 
-# Opción C — Python si no tienes Node
-cd frontend
-python3 -m http.server 5500
+- **Login con AWS Cognito** — autenticación vía `POST /api/vertebraai/auth/login`, token JWT guardado en `localStorage`
+- **Recuperación de contraseña** — flujo OTP de dos pasos (`forgot-password` → `confirm-password`)
+- **Subida de radiografías** — drag & drop o selector de archivo (PNG / JPEG, mínimo 32×32 px)
+- **Selección de modelo** — tarjetas con métricas de cada modelo antes de analizar
+- **Visualización con slider** — comparador deslizable original / segmentado con zoom y pan
+- **Bounding boxes interactivos** — click en vértebras del panel lateral para superponer cajas sobre la máscara
+- **Comparación multi-modelo** — hasta 3 paneles simultáneos con el mismo archivo
+- **Exportar resultados** — descarga de original, máscara, overlay y reporte JSON con token auth
 
-# 3. Abrir en el navegador (los servers estáticos sirven index.html por defecto)
-open http://localhost:5500/
-```
-
-## Backend en otra URL
-
-Si tu backend corre en otro host/puerto, sobreescribe la variable global
-**antes** de que carguen los scripts:
-
-```html
-<script>window.BACKEND_URL = 'http://mi-servidor:8080';</script>
-<script type="text/babel" src="app.jsx"></script>
-```
-
-## Estructura
+### Estructura
 
 ```
 frontend/
-├── index.html       Entry point (HTML + tags <script>)
-├── app.jsx               App principal: UploadZone, ProcessingScreen, ResultView
-├── tweaks-panel.jsx      Panel de ajustes (tema)
-├── styles.css            Estilos Material 3 dark mode
-└── README.md             (este archivo)
+├── index.html          Entry point: carga CDN, config.js y los scripts JSX
+├── app.jsx             App principal: LoginView, UploadZone, ResultView, CompareView
+├── tweaks-panel.jsx    Panel de ajustes en runtime (tema oscuro/claro)
+├── styles.css          Estilos Material 3 (dark mode por defecto)
+├── config.js           URL del backend — generado por Terraform en producción
+└── package.json        Script npm start (serve local en :5500)
 ```
 
-## Qué muestra el frontend
+---
 
-Todo lo que el backend devuelve y nada más. Específicamente del endpoint
-`POST /api/vertebraai/xrays`:
+## Dependencias
 
-| Sección UI | Campo del backend |
-|---|---|
-| Imagen original | `URL.createObjectURL(file)` (local, no del backend) |
-| Máscara coloreada | `mask.data` (base64 PNG) |
-| Confianza global | `metrics.confidence` |
-| Vértebras detectadas | `metrics.detected_count / vertebrae.length` |
-| Por región | `metrics.by_region.{cervical,thoracic,lumbar}` |
-| Versión modelo | `metrics.model_metrics.model_version` |
-| Dice / IoU / latencia | `metrics.model_metrics.{dice, iou, latency_ms}` |
-| Tiempo procesamiento | `processing.total_time_ms` |
-| Lista de vértebras | `vertebrae[]` (id, label, region, detected, confidence, pixel_count) |
-| Dimensiones máscara | `mask.dimensions.{width, height}` |
-| Study ID + timestamp | `study_id`, `timestamp` |
+Sin dependencias de runtime en `node_modules` — todo se carga desde CDN con verificación de integridad (SRI).
 
-Botones de exportar usan `GET /api/vertebraai/xrays/{study_id}/exports/{format}`
-con format ∈ `{png, mask, overlay, report}`.
+| Librería | Versión | Carga |
+|----------|---------|-------|
+| React | 18.3.1 | CDN (unpkg) |
+| ReactDOM | 18.3.1 | CDN (unpkg) |
+| Babel Standalone | 7.29.0 | CDN (unpkg) |
 
-## Qué se eliminó respecto a la versión mock
+**Dependencia de desarrollo** (solo para el servidor local):
 
-- C1 y C2 (el modelo solo segmenta C3-C7)
-- Ilustración SVG fake de columna y máscara → ahora son imágenes reales
-- HUD con metadata DICOM hardcodeada (`kVp 75 · mA 320`, `RGBA · 16-bit`, `VIEW · LATERAL`)
-- Subtítulo "v2.4" hardcodeado → ahora muestra `model_version` real
-- "U-Net 3D" hardcodeado → ahora muestra el modelo real
-- Métricas inventadas (Dice 0.943, IoU 0.892) → ahora vienen del análisis real
-- Modos de color (Región/Gradiente/Único/Mono) — la máscara viene ya coloreada del backend
-- Toggle de etiquetas — la máscara del backend ya es la final
-- Tab "Historial / Modelo / Ayuda" — endpoints aún no existen
-- `vertebra-assets.jsx` (componentes SVG fake) — eliminado del proyecto
+| Paquete | Versión | Uso |
+|---------|---------|-----|
+| `serve` | ^14.2.4 | Servidor HTTP estático para desarrollo local |
+
+---
+
+## Entorno de ejecución
+
+| Componente | Requisito |
+|------------|-----------|
+| Node.js / npx | 18+ (solo para `npm start` local) |
+| Navegador | Chrome 90+, Firefox 88+, Safari 14+ |
+| Backend | Servicio `services/` corriendo y accesible |
+
+No se requiere Python, Docker ni ningún compilador. Los archivos JSX son transpilados en el navegador por Babel Standalone.
+
+---
+
+## Pasos de despliegue
+
+### Local
+
+```bash
+# 1. Asegurarse de que el backend esté corriendo (en otro terminal)
+cd services
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# o con Docker:
+# docker run -p 8000:8000 -e AUTH_ENABLED=false vertebraai
+
+# 2. Servir el frontend
+cd frontend
+
+# Opción A — npm (recomendado)
+npm install        # solo la primera vez, instala 'serve'
+npm start          # corre: serve . -l 5500
+
+# Opción B — npx sin instalar
+npx serve . -l 5500
+
+# Opción C — Python (sin Node)
+python3 -m http.server 5500
+
+# 3. Abrir en el navegador
+open http://localhost:5500/
+```
+
+> Abrir `index.html` directamente como `file://` **no funciona**: el navegador bloquea las peticiones `fetch` a localhost por política de origen cruzado (CORS).
+
+### Producción (AWS S3 + CloudFront)
+
+El despliegue en producción se gestiona desde Terraform en la raíz del monorepo. Terraform:
+
+1. Genera `config.js` con `window.BACKEND_URL = ""` (ruta relativa vía CloudFront)
+2. Sincroniza `frontend/` al bucket S3
+3. Invalida la caché de CloudFront
+
+```bash
+# Desde terraform/
+terraform apply -target=null_resource.deploy_frontend
+```
+
+Para el despliegue completo ver [`../terraform/`](../terraform/) y la sección **AWS (Terraform)** del [README raíz](../README.md).
+
+---
+
+## Configuración
+
+El frontend no usa variables de entorno del sistema. Su configuración se controla mediante dos mecanismos:
+
+### URL del backend
+
+El archivo `config.js` define la variable global `window.BACKEND_URL`, que determina a dónde apuntan todas las peticiones del frontend.
+
+| Contexto | Valor de `window.BACKEND_URL` | Resultado |
+|----------|-------------------------------|-----------|
+| Producción (CloudFront) | `""` *(string vacío)* | Rutas relativas — `/api/*` se enrutan al backend vía CloudFront |
+| Desarrollo local | `"http://localhost:8000"` | Peticiones directas al backend local |
+| Backend en otro host | `"http://mi-servidor:8080"` | Peticiones al host indicado |
+
+**En producción** `config.js` es generado automáticamente por Terraform — no editar a mano ni commitear cambios en este archivo (está en `.gitignore`).
+
+**En desarrollo local** editar `config.js` manualmente si el backend corre en un puerto distinto al `8000`:
+
+```js
+// config.js — solo para desarrollo local
+window.BACKEND_URL = "http://localhost:8000";
+```
+
+También se puede sobreescribir desde la consola del navegador sin tocar archivos:
+
+```js
+// Solo aplica hasta recargar la página
+window.BACKEND_URL = "http://192.168.1.100:8000";
+```
+
+### Apariencia
+
+El panel de ajustes (botón ⚙ en la esquina del frontend) permite cambiar el **tema** en runtime sin recargar la página. La preferencia se persiste en `localStorage`.
+
+| Parámetro | Valores | Valor por defecto |
+|-----------|---------|-------------------|
+| `theme` | `dark` · `light` | `dark` |
+
+El valor por defecto se define en la constante `TWEAK_DEFAULTS` dentro de `app.jsx` (línea marcada con `/*EDITMODE-BEGIN*/`):
+
+```js
+const TWEAK_DEFAULS = /*EDITMODE-BEGIN*/{
+  "theme": "dark"
+}/*EDITMODE-END*/;
+```
+
+---
+
+## Credenciales de ejemplo
+
+El frontend delega la autenticación al backend (AWS Cognito). Para iniciar sesión usar el usuario de prueba del proyecto:
+
+| Campo | Valor |
+|-------|-------|
+| Usuario | `maia_groupo5` |
+| Contraseña | *(solicitar por canal seguro)* |
+
+> Para desarrollo local sin Cognito, arrancar el backend con `AUTH_ENABLED=false` — el frontend omite el login y entra directamente a la pantalla de carga.
+
+---
+
+## Ejemplos de uso
+
+1. Abrir `http://localhost:5500/` en el navegador
+2. Iniciar sesión con las credenciales de ejemplo
+3. Arrastrar una radiografía AP en formato PNG o JPEG al área de carga
+4. Seleccionar el modelo deseado en el panel derecho (por defecto: *MedSAM + VertebraPrompt*)
+5. Esperar el análisis (~30 s en CPU)
+6. Explorar los resultados:
+   - Mover el **slider** para comparar original vs segmentado
+   - Hacer **click en una vértebra** del panel lateral para ver su bounding box
+   - Usar **Acciones → Exportar** para descargar la máscara o el reporte JSON
+   - Usar **Comparar** para ejecutar el mismo archivo con otro modelo en paralelo
+
+---
+
+## Contribución
+
+1. Crear rama: `git checkout -b feature/nombre-feature`
+2. Editar `app.jsx` o `styles.css` según el cambio
+3. Verificar en el navegador en `http://localhost:5500/` (no hay tests automatizados en el frontend)
+4. Abrir Pull Request con capturas de pantalla del cambio visual
+
+---
+
+## Licencia
+
+Proyecto académico — Universidad de los Andes, MaIA 2026. Uso restringido a fines educativos e investigativos.

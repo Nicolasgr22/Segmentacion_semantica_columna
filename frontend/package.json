@@ -6,7 +6,7 @@
   "scripts": {
     "start": "serve . -l 5500",
     "dev": "serve . -l 5500",
-    "open": "open http://localhost:5500/VertebraAI.html"
+    "open": "open http://localhost:5500"
   },
   "devDependencies": {
     "serve": "^14.2.4"
