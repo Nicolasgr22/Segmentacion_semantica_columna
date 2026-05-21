@@ -33,6 +33,8 @@ Sistema de segmentación semántica de columna vertebral en radiografías que de
 - [Credenciales de ejemplo](#credenciales-de-ejemplo)
 - [Ejemplos de uso](#ejemplos-de-uso)
   - [Pruebas](#pruebas)
+- [Arquitectura de la solución](#arquitectura-de-la-solución)
+- [Demo](#demo)
 - [Contribución](#contribución)
 - [Licencia](#licencia)
 
@@ -47,7 +49,7 @@ Sistema de segmentación semántica de columna vertebral en radiografías que de
 > |---------|----------|--------------------|
 > | `Notebooks/` | [`notebooks/`](notebooks/) — en este repositorio | Cuadernos con análisis, entrenamiento y pruebas |
 > | `Modelos/` | `s3://maia-proyecto-final-models/models/` — **no se encuentra en el repositorio git por restricciones de tamaño** | Archivo(s) del modelo final guardado (`.pt`) |
-> | `Datos/` | [`notebooks/medsam_pipeline/results_summary/`](notebooks/medsam_pipeline/results_summary/) — en este repositorio | Muestras o estructura de los datos usados |
+> | `Datos/` | [`data/`](data/) — en este repositorio | Muestras o estructura de los datos usados |
 >
 > Para descargar los modelos: `aws s3 cp s3://maia-proyecto-final-models/models/ ./models/ --recursive --profile vertebraai-models`
 > (credenciales de solo lectura disponibles en la sección [Credenciales de ejemplo](#credenciales-de-ejemplo))
@@ -523,6 +525,18 @@ pytest tests/unit/ -v
 ```
 
 Cobertura objetivo: ≥ 80 %
+
+---
+
+## Arquitectura de la solución
+
+El documento [`docs/arquitectura-solucion.md`](docs/arquitectura-solucion.md) describe el diseño completo del sistema: componentes, flujos de datos, decisiones de arquitectura e infraestructura AWS.
+
+---
+
+## Demo
+
+El video [`docs/maia-proyecto-final-grupo5.mp4`](docs/maia-proyecto-final-grupo5.mp4) muestra el sistema en funcionamiento: flujo completo desde la subida de una radiografía hasta la visualización de los resultados de segmentación.
 
 ---
 

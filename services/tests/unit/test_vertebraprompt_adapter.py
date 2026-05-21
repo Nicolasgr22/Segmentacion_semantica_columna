@@ -15,15 +15,8 @@ import numpy as np
 import pytest
 import torch
 
+from app.config import settings
 from app.infrastructure.adapters.model.vertebraprompt_boxrefiner_adapter import (
-    BOX_EXPAND_H,
-    BOX_EXPAND_W,
-    BOX_REFINER_MAX_ABS_DXY,
-    BOX_REFINER_MAX_ABS_LOG_SCALE,
-    BOX_REFINER_SIZE,
-    MEDSAM_IMG_SIZE,
-    N_CLASES,
-    PROMPT_NET_INPUT,
     VERTEBRA_LABELS,
     BoxRefinerNet,
     _apply_delta,
@@ -37,6 +30,16 @@ from app.infrastructure.adapters.model.vertebraprompt_boxrefiner_adapter import 
     _seleccionar_camino_dp,
     _unletterbox_mask,
 )
+
+# Aliases para legibilidad en los tests
+BOX_EXPAND_H = settings.medsam_box_expand_h
+BOX_EXPAND_W = settings.medsam_box_expand_w
+BOX_REFINER_MAX_ABS_DXY = settings.medsam_box_refiner_max_abs_dxy
+BOX_REFINER_MAX_ABS_LOG_SCALE = settings.medsam_box_refiner_max_abs_log_scale
+BOX_REFINER_SIZE = settings.medsam_box_refiner_size
+MEDSAM_IMG_SIZE = settings.medsam_img_size
+N_CLASES = settings.medsam_n_classes
+PROMPT_NET_INPUT = settings.medsam_prompt_net_input
 
 
 # ---------------------------------------------------------------------------

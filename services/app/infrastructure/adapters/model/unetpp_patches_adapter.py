@@ -34,41 +34,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from app.config import settings
 from app.core.domain.ports.model_port import ModelOutput, ModelPort
 
 _executor = ThreadPoolExecutor(max_workers=2)
 
 
-# ---------------------------------------------------------------------------
-# Constantes (alineadas con celdas 13, 19 y 28 del notebook)
-# ---------------------------------------------------------------------------
-ENCODER_NAME = "efficientnet-b7"
-IN_CHANNELS = 3
-NUM_MODEL_CLASSES = 18                       # bg + T1..T12 + L1..L5
-PATCH_SIZE = 128                             # entrada del modelo (entreno)
-
-# Preprocesamiento (ImageNet stats)
-MEAN = (0.485, 0.456, 0.406)
-STD = (0.229, 0.224, 0.225)
-CLAHE_CLIP = 2.0
-CLAHE_TILE = (8, 8)
-
-# Hiperparámetros ganadores del barrido (celdas 30 y 32 del notebook)
-PATCH_AREA = 0.5
-SIGMA = 50.0
-STRIDE_RATIO = 4
-
-# Contrato del servicio
-N_SERVICE_CLASSES = 23
-FIRST_VERTEBRA_ID = 6        # T1 en el contrato (ver vertebra.ID2LABEL)
-LAST_VERTEBRA_ID = 22        # L5
-
-
 def _model_to_service_class_id(model_class: int) -> int:
-    """Remapea el id del modelo (0..17) al id del servicio (0..22)."""
+    """Remapea el id del modelo al id del servicio.
+
+    Offset = first_vertebra_id - 1 (T1 arranca en id 6 del contrato).
+    """
     if model_class == 0:
         return 0
-    return model_class + 5  # 1..17 → 6..22
+    return model_class + (settings.unetpp_first_vertebra_id - 1)
 
 
 # ---------------------------------------------------------------------------
@@ -81,10 +60,10 @@ def _build_model() -> nn.Module:
     import segmentation_models_pytorch as smp
 
     return smp.UnetPlusPlus(
-        encoder_name=ENCODER_NAME,
+        encoder_name=settings.unetpp_encoder_name,
         encoder_weights=None,        # pesos vienen del checkpoint
-        in_channels=IN_CHANNELS,
-        classes=NUM_MODEL_CLASSES,
+        in_channels=settings.unetpp_in_channels,
+        classes=settings.unetpp_num_model_classes,
         decoder_attention_type=None,
     )
 
@@ -134,7 +113,10 @@ def _load_checkpoint(path: Path, device: torch.device) -> nn.Module:
 def _apply_clahe_rgb(image_uint8: np.ndarray) -> np.ndarray:
     """CLAHE sobre canal L de LAB, replicando ``A.CLAHE(p=1.0)``."""
     lab = cv2.cvtColor(image_uint8, cv2.COLOR_RGB2LAB)
-    clahe = cv2.createCLAHE(clipLimit=CLAHE_CLIP, tileGridSize=CLAHE_TILE)
+    clahe = cv2.createCLAHE(
+        clipLimit=settings.unetpp_clahe_clip,
+        tileGridSize=tuple(settings.unetpp_clahe_tile),
+    )
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])
     return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
 
@@ -142,7 +124,7 @@ def _apply_clahe_rgb(image_uint8: np.ndarray) -> np.ndarray:
 def _normalize(image_uint8: np.ndarray) -> np.ndarray:
     """``A.Normalize(mean, std)``: /255 → (x - mean) / std, dtype float32."""
     arr = image_uint8.astype(np.float32) / 255.0
-    arr = (arr - np.array(MEAN, dtype=np.float32)) / np.array(STD, dtype=np.float32)
+    arr = (arr - np.array(settings.unetpp_mean, dtype=np.float32)) / np.array(settings.unetpp_std, dtype=np.float32)
     return arr
 
 
@@ -160,22 +142,26 @@ def _patch_inference(
     model: nn.Module,
     image_norm: np.ndarray,
     device: torch.device,
-    patch_area: float = PATCH_AREA,
-    stride_ratio: int = STRIDE_RATIO,
-    sigma: float = SIGMA,
+    patch_area: float | None = None,
+    stride_ratio: int | None = None,
+    sigma: float | None = None,
 ) -> np.ndarray:
     """Ejecuta inferencia por parches con fusión Gaussiana.
 
     Args:
         image_norm: (H, W, 3) float32 ya normalizada.
-        Devuelve probabilidades softmax (NUM_MODEL_CLASSES, H, W) en CPU/np.
+        Devuelve probabilidades softmax (unetpp_num_model_classes, H, W) en CPU/np.
     """
+    _patch_area = patch_area if patch_area is not None else settings.unetpp_patch_area
+    _stride_ratio = stride_ratio if stride_ratio is not None else settings.unetpp_stride_ratio
+    _sigma = sigma if sigma is not None else settings.unetpp_sigma
+
     H, W, _ = image_norm.shape
     min_dim = min(H, W)
-    patch_size = int(round(float(np.sqrt(patch_area * H * W))))
+    patch_size = int(round(float(np.sqrt(_patch_area * H * W))))
     patch_size = min(patch_size, min_dim)
     patch_size = max(patch_size, 1)
-    stride = max(int(round(patch_size / stride_ratio)), 1)
+    stride = max(int(round(patch_size / _stride_ratio)), 1)
 
     y_steps = list(range(0, H - patch_size + 1, stride))
     if not y_steps:
@@ -189,15 +175,17 @@ def _patch_inference(
     if x_steps[-1] + patch_size < W:
         x_steps.append(W - patch_size)
 
-    accum = torch.zeros((NUM_MODEL_CLASSES, H, W), dtype=torch.float32, device=device)
+    accum = torch.zeros((settings.unetpp_num_model_classes, H, W), dtype=torch.float32, device=device)
     weights = torch.zeros((H, W), dtype=torch.float32, device=device)
-    window = _gaussian_window(patch_size, sigma, device)
+    window = _gaussian_window(patch_size, _sigma, device)
 
     for y in y_steps:
         for x in x_steps:
             patch_hw3 = image_norm[y : y + patch_size, x : x + patch_size, :]
             resized = cv2.resize(
-                patch_hw3, (PATCH_SIZE, PATCH_SIZE), interpolation=cv2.INTER_LINEAR
+                patch_hw3,
+                (settings.unetpp_patch_size, settings.unetpp_patch_size),
+                interpolation=cv2.INTER_LINEAR,
             )
             patch_t = (
                 torch.from_numpy(resized).permute(2, 0, 1).unsqueeze(0).to(device).float()
@@ -220,18 +208,18 @@ def _remap_to_service_contract(
     model_probs: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """De ``(18, H, W)`` del modelo → ``(mask uint8 0..22, proba (23, H, W) float32)``."""
+    n_model = settings.unetpp_num_model_classes
+    n_service = settings.unetpp_n_service_classes
     _, H, W = model_probs.shape
-    proba = np.zeros((N_SERVICE_CLASSES, H, W), dtype=np.float32)
+    proba = np.zeros((n_service, H, W), dtype=np.float32)
     proba[0] = model_probs[0].astype(np.float32)
-    for model_class in range(1, NUM_MODEL_CLASSES):
+    for model_class in range(1, n_model):
         service_class = _model_to_service_class_id(model_class)
         proba[service_class] = model_probs[model_class].astype(np.float32)
 
-    # argmax sobre los 18 canales originales (la columna lumbar/torácica del modelo
-    # ya cubre todas las clases con probabilidad útil), luego remap a id de servicio.
     model_mask = np.argmax(model_probs, axis=0).astype(np.int32)
-    remap = np.zeros(NUM_MODEL_CLASSES, dtype=np.uint8)
-    for k in range(NUM_MODEL_CLASSES):
+    remap = np.zeros(n_model, dtype=np.uint8)
+    for k in range(n_model):
         remap[k] = _model_to_service_class_id(k)
     mask = remap[model_mask]
     return mask, proba

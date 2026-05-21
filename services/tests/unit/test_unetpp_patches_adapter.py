@@ -14,15 +14,8 @@ import pytest
 import torch
 import torch.nn as nn
 
+from app.config import settings
 from app.infrastructure.adapters.model.unetpp_patches_adapter import (
-    FIRST_VERTEBRA_ID,
-    LAST_VERTEBRA_ID,
-    NUM_MODEL_CLASSES,
-    N_SERVICE_CLASSES,
-    PATCH_AREA,
-    PATCH_SIZE,
-    SIGMA,
-    STRIDE_RATIO,
     UnetPlusPlusPatchesAdapter,
     _apply_clahe_rgb,
     _gaussian_window,
@@ -31,6 +24,16 @@ from app.infrastructure.adapters.model.unetpp_patches_adapter import (
     _patch_inference,
     _remap_to_service_contract,
 )
+
+# Aliases para legibilidad en los tests
+FIRST_VERTEBRA_ID = settings.unetpp_first_vertebra_id
+LAST_VERTEBRA_ID = settings.unetpp_last_vertebra_id
+NUM_MODEL_CLASSES = settings.unetpp_num_model_classes
+N_SERVICE_CLASSES = settings.unetpp_n_service_classes
+PATCH_AREA = settings.unetpp_patch_area
+PATCH_SIZE = settings.unetpp_patch_size
+SIGMA = settings.unetpp_sigma
+STRIDE_RATIO = settings.unetpp_stride_ratio
 
 
 # ---------------------------------------------------------------------------

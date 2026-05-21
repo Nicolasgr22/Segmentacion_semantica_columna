@@ -85,17 +85,14 @@ _VERTEBRAPROMPT_BOXREFINER = ModelCard(
 # sliding window, pero esta última es la única viable en producción end-to-end.
 _UNETPP_PATCHES_METRICS = [
     ExperimentMetric(
-        name="dice_patches",
-        value=0.6730,
-        description="Dice por parches (test, dataloader) con NUM_PATCHES=8",
+        name="dice",
+        value=0.4568,
+        description="Dice tras reconstrucción por sliding window con fusión Gaussiana ",
     ),
     ExperimentMetric(
-        name="dice_reconstructed",
-        value=0.4711,
-        description=(
-            "Dice tras reconstrucción por sliding window con fusión Gaussiana "
-            "(patch_area=0.5, sigma=50, stride_ratio=4)"
-        ),
+        name="IoU",
+        value=0.4016,
+        description="IoU tras reconstrucción por sliding window con fusión Gaussiana ",
     ),
 ]
 

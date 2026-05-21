@@ -18,7 +18,9 @@ from app.core.domain.entities.vertebra import VertebralRegion, build_vertebrae_f
 from app.core.domain.ports.model_port import ModelOutput, ModelPort
 from app.core.domain.ports.storage_port import StoragePort
 from app.api.v1.schemas.requests import ModelName
+from app.core.domain.entities.user import AuthUser
 from app.dependencies import (
+    get_current_user,
     get_model_adapter,
     get_model_dispatch,
     get_storage_adapter,
@@ -121,6 +123,8 @@ def test_client(mock_model_port, mock_storage_port) -> TestClient:
         ModelName.MEDSAM: mock_model_port,
         ModelName.UNETPP_PATCHES: mock_model_port,
     }
+    _test_user = AuthUser(email="test@test.com", name="tester", sub="test-sub")
+    app.dependency_overrides[get_current_user] = lambda: _test_user
     app.dependency_overrides[get_model_adapter] = lambda: mock_model_port
     app.dependency_overrides[get_model_dispatch] = lambda: mocked_dispatch
     app.dependency_overrides[get_storage_adapter] = lambda: mock_storage_port

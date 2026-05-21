@@ -333,27 +333,89 @@ El pipeline de segmentación es el flujo más complejo del sistema. Involucra tr
 
 ##### 🔧 Configuración Backend
 
-Toda la configuración del backend se gestiona mediante variables de entorno (archivo `.env` o inyección en Docker). Gestionadas por Pydantic `BaseSettings` en `config.py`.
+Toda la configuración del backend se gestiona mediante variables de entorno (archivo `.env` o inyección en Docker). Gestionadas por Pydantic `BaseSettings` en [`config.py`](../../services/app/config.py).
 
-| Variable de Entorno | Default | Descripción |
+> **Principio clave:** cualquier parámetro definido en `config.py` puede sobreescribirse **sin modificar el código**, declarándolo como variable de entorno o en el archivo `.env`. El orden de prioridad es: variable de entorno del sistema > `.env` > valor default en `config.py`. Solo es necesario declarar las variables que difieren del default.
+
+**Servidor y API**
+
+| Variable | Default | Descripción |
 |---|---|---|
 | `MODEL_DEVICE` | `cpu` | Dispositivo de inferencia: `cpu`, `cuda`, `mps` |
-| `MODEL_INPUT_SIZE` | `512` | Resolución interna para preprocessing de imágenes |
-| `MEDSAM_PROMPT_NET_CHECKPOINT` | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` | Pesos de VertebraPrompt-Net |
-| `MEDSAM_BOX_REFINER_CHECKPOINT` | `model-pkg/medsam/box_refiner_best.pt` | Pesos de BoxRefiner |
-| `MEDSAM_SAM_CHECKPOINT` | `model-pkg/medsam/medsam_vit_b.pth` | Pesos base SAM ViT-B |
-| `MEDSAM_FINETUNED_CHECKPOINT` | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` | Pesos MedSAM fine-tuned |
-| `UNETPP_PATCHES_CHECKPOINT` | `model-pkg/unet++_patches/unet++_patches.pth` | Pesos UNet++ EfficientNet-B7 |
+| `MODEL_INPUT_SIZE` | `512` | Resolución interna para preprocessing |
 | `MAX_UPLOAD_MB` | `50` | Tamaño máximo de imagen para upload |
-| `INFERENCE_TIMEOUT_S` | `60` | Timeout máximo de inferencia en segundos |
-| `CORS_ORIGINS` | `["*"]` | Lista JSON de orígenes permitidos para CORS |
+| `INFERENCE_TIMEOUT_S` | `60` | Timeout de inferencia en segundos |
+| `CORS_ORIGINS` | `["*"]` | Lista JSON de orígenes permitidos |
 | `RATE_LIMIT_DEFAULT` | `120/minute` | Rate limit general por IP |
-| `RATE_LIMIT_ANALYZE` | `5/minute` | Rate limit para el endpoint `/xrays` |
-| `DEBUG` | `false` | Habilita Swagger UI (`/docs`) y ReDoc (`/redoc`) |
+| `RATE_LIMIT_ANALYZE` | `5/minute` | Rate limit para `POST /xrays` |
+| `DEBUG` | `false` | Habilita Swagger UI y ReDoc |
 | `PORT` | `8000` | Puerto del servidor Uvicorn |
-| `COGNITO_USER_POOL_ID` | — | ID del User Pool de AWS Cognito (requerido) |
-| `COGNITO_CLIENT_ID` | — | ID del App Client de Cognito (requerido) |
-| `COGNITO_REGION` | `us-east-1` | Región AWS de Cognito |
+| `AUTH_ENABLED` | `true` | Valida JWT Cognito. Poner `false` para dev local sin Cognito |
+
+**Checkpoints e hiperparámetros — Pipeline MedSAM (VertebraPrompt-Net + BoxRefiner + MedSAM)**
+
+Los valores default corresponden al pipeline ganador (notebook 06). Solo se deben declarar en `.env` para experimentación.
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `MEDSAM_PROMPT_NET_CHECKPOINT` | `model-pkg/medsam/vertebraprompt_net_auxiliar_best.pt` | Checkpoint VertebraPrompt-Net |
+| `MEDSAM_BOX_REFINER_CHECKPOINT` | `model-pkg/medsam/box_refiner_best.pt` | Checkpoint BoxRefiner |
+| `MEDSAM_SAM_CHECKPOINT` | `model-pkg/medsam/medsam_vit_b.pth` | Checkpoint SAM ViT-B base |
+| `MEDSAM_FINETUNED_CHECKPOINT` | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` | Checkpoint MedSAM fine-tuned |
+| `MEDSAM_PROMPT_NET_INPUT` | `512` | Resolución de entrada VertebraPrompt-Net |
+| `MEDSAM_IMG_SIZE` | `1024` | Resolución de grilla MedSAM y letterbox |
+| `MEDSAM_BASE_CHANNELS` | `32` | Canales base U-Net multi-tarea |
+| `MEDSAM_N_CLASSES` | `17` | Clases predichas (T1..T12 + L1..L5) |
+| `MEDSAM_TOP_PEAKS` | `90` | Máximo de picos del heatmap |
+| `MEDSAM_MIN_PEAK_DIST` | `8` | Distancia mínima entre picos (NMS) |
+| `MEDSAM_THR_REL_PEAKS` | `0.12` | Umbral relativo al máximo del heatmap |
+| `MEDSAM_N_BOXES_PATH` | `17` | Pasos de la programación dinámica |
+| `MEDSAM_MAX_CANDIDATES` | `120` | Candidatos máximos a la DP |
+| `MEDSAM_MAX_GAP_REL_DY` | `2.40` | Multiplicador del gap esperado en DP |
+| `MEDSAM_Y_MIN_ANATOMIC_MARGIN` | `0.06` | Margen superior de exclusión de cráneo |
+| `MEDSAM_SKULL_SCORE_FACTOR` | `0.12` | Penalización de score en zona cráneo |
+| `MEDSAM_BOX_EXPAND_W` | `1.12` | Expansión horizontal caja final |
+| `MEDSAM_BOX_EXPAND_H` | `1.12` | Expansión vertical caja final |
+| `MEDSAM_WH_PRED_BLEND` | `0.65` | Peso de la predicción wh-map |
+| `MEDSAM_WH_TEMPLATE_BLEND` | `0.35` | Peso de la plantilla mediana |
+| `MEDSAM_WH_CLIP_W` | `[0.03, 0.28]` | Límites `[min, max]` de w_rel (JSON) |
+| `MEDSAM_WH_CLIP_H` | `[0.025, 0.18]` | Límites `[min, max]` de h_rel (JSON) |
+| `MEDSAM_BOX_REFINER_SIZE` | `192` | Resolución crop de entrada al refinador |
+| `MEDSAM_BOX_REFINER_BLEND` | `0.80` | Factor de mezcla al aplicar deltas |
+| `MEDSAM_BOX_REFINER_MAX_ABS_DXY` | `0.45` | Saturación tanh desplazamientos dx, dy |
+| `MEDSAM_BOX_REFINER_MAX_ABS_LOG_SCALE` | `0.45` | Saturación tanh escala log dw, dh |
+| `MEDSAM_BOX_REFINER_CONTEXT_FRAC` | `0.85` | Contexto extra en el crop de refinamiento |
+| `MEDSAM_N_SERVICE_CLASSES` | `23` | Clases contrato del servicio (bg + C1..C7 + T1..T12 + L1..L5) |
+
+**Checkpoints e hiperparámetros — UNet++ EfficientNet-B7 (ventana deslizante)**
+
+Los valores default son los hiperparámetros ganadores del barrido (notebook `Unet++_patches.ipynb`, celdas 30–32, Dice test 0.4711). Solo se deben declarar en `.env` para experimentación.
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `UNETPP_PATCHES_CHECKPOINT` | `model-pkg/unet++_patches/unet++_patches.pth` | Pesos del modelo |
+| `UNETPP_ENCODER_NAME` | `efficientnet-b7` | Backbone encoder |
+| `UNETPP_IN_CHANNELS` | `3` | Canales de entrada (RGB) |
+| `UNETPP_NUM_MODEL_CLASSES` | `18` | Clases emitidas (bg + T1..T12 + L1..L5) |
+| `UNETPP_PATCH_SIZE` | `128` | Resolución de cada parche antes de inferencia |
+| `UNETPP_MEAN` | `[0.485, 0.456, 0.406]` | Media de normalización ImageNet (JSON) |
+| `UNETPP_STD` | `[0.229, 0.224, 0.225]` | Desviación estándar ImageNet (JSON) |
+| `UNETPP_CLAHE_CLIP` | `2.0` | `clipLimit` del preprocesado CLAHE |
+| `UNETPP_CLAHE_TILE` | `[8, 8]` | `tileGridSize` del preprocesado CLAHE (JSON) |
+| `UNETPP_PATCH_AREA` | `0.5` | Fracción del área total para el tamaño de ventana |
+| `UNETPP_SIGMA` | `50.0` | Sigma de la ventana gaussiana de fusión |
+| `UNETPP_STRIDE_RATIO` | `4` | Divisor del tamaño de parche para calcular stride |
+| `UNETPP_N_SERVICE_CLASSES` | `23` | Clases del contrato del servicio (incluyendo cervicales) |
+| `UNETPP_FIRST_VERTEBRA_ID` | `6` | ID de servicio de T1 (contrato `vertebra.ID2LABEL`) |
+| `UNETPP_LAST_VERTEBRA_ID` | `22` | ID de servicio de L5 |
+
+**Autenticación (AWS Cognito)** — solo cuando `AUTH_ENABLED=true`
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `COGNITO_USER_POOL_ID` | — | ID del User Pool (requerido en producción) |
+| `COGNITO_CLIENT_ID` | — | ID del App Client (requerido en producción) |
+| `COGNITO_REGION` | `us-east-1` | Región AWS del User Pool |
 
 **Ejecución local:**
 ```bash

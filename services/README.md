@@ -210,6 +210,16 @@ Para el despliegue completo en AWS, ver [`../terraform/`](../terraform/) y la se
 
 Todas las variables se leen desde el archivo `.env` ubicado en `services/` o directamente del entorno del proceso (variables de entorno del sistema o del contenedor Docker). La configuración es gestionada por [`app/config.py`](app/config.py) usando `pydantic-settings`, que valida tipos y aplica los valores por defecto automáticamente.
 
+> **Cualquier parámetro definido en `app/config.py` puede sobreescribirse sin tocar el código**, simplemente declarándolo como variable de entorno o en `.env`. El orden de prioridad es:
+>
+> ```
+> 1. Variable de entorno del sistema  (export UNETPP_SIGMA=30.0)
+> 2. Archivo .env                     (UNETPP_SIGMA=30.0)
+> 3. Valor default en config.py       (unetpp_sigma: float = 50.0)
+> ```
+>
+> Solo es necesario declarar las variables que difieren del default. El resto se aplica automáticamente.
+
 ```bash
 # Punto de partida para configuración local
 cp services/.env.example services/.env
@@ -243,6 +253,86 @@ Rutas relativas al directorio `services/`. Si los modelos se montan en otra ubic
 | `MEDSAM_SAM_CHECKPOINT` | Checkpoint base SAM ViT-B | `model-pkg/medsam/medsam_vit_b.pth` |
 | `MEDSAM_FINETUNED_CHECKPOINT` | Checkpoint MedSAM fine-tuned (decoder + encoder parcial) | `model-pkg/medsam/medsam_decoder_encoder_parcial_entrenado_vertebraprompt_aux.pt` |
 | `UNETPP_PATCHES_CHECKPOINT` | Checkpoint UNet++ con ventana deslizante | `model-pkg/unet++_patches/unet++_patches.pth` |
+
+### Hiperparámetros MedSAM pipeline (configurables sin recompilar)
+
+Los valores siguientes corresponden a los **hiperparámetros del pipeline ganador** (notebook 06). Solo es necesario declararlos en `.env` si se quiere experimentar con valores distintos.
+
+#### Arquitectura VertebraPrompt-Net y decodificación
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `MEDSAM_PROMPT_NET_INPUT` | Resolución de entrada de VertebraPrompt-Net (píxeles) | `512` |
+| `MEDSAM_IMG_SIZE` | Resolución de la grilla MedSAM y el letterbox | `1024` |
+| `MEDSAM_BASE_CHANNELS` | Canales base de la U-Net multi-tarea | `32` |
+| `MEDSAM_N_CLASSES` | Clases predichas (T1..T12 + L1..L5) | `17` |
+| `MEDSAM_TOP_PEAKS` | Máximo de picos extraídos del heatmap | `90` |
+| `MEDSAM_MIN_PEAK_DIST` | Distancia mínima entre picos (supresión no máxima) | `8` |
+| `MEDSAM_THR_REL_PEAKS` | Umbral relativo al máximo del heatmap para aceptar un pico | `0.12` |
+| `MEDSAM_N_BOXES_PATH` | Pasos de la programación dinámica (= n_classes) | `17` |
+| `MEDSAM_MAX_CANDIDATES` | Candidatos máximos enviados a la DP | `120` |
+| `MEDSAM_MAX_GAP_REL_DY` | Multiplicador del gap esperado en la DP | `2.40` |
+| `MEDSAM_Y_MIN_ANATOMIC_MARGIN` | Margen superior para exclusión de cráneo (fracción de la imagen) | `0.06` |
+| `MEDSAM_SKULL_SCORE_FACTOR` | Penalización de score en zona de cráneo | `0.12` |
+
+#### Construcción de cajas
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `MEDSAM_BOX_EXPAND_W` | Factor de expansión horizontal de la caja final | `1.12` |
+| `MEDSAM_BOX_EXPAND_H` | Factor de expansión vertical de la caja final | `1.12` |
+| `MEDSAM_WH_PRED_BLEND` | Peso de la predicción del wh-map en la mezcla | `0.65` |
+| `MEDSAM_WH_TEMPLATE_BLEND` | Peso de la plantilla mediana en la mezcla | `0.35` |
+| `MEDSAM_WH_CLIP_W` | Límites `[min, max]` para recorte de w_rel (lista JSON) | `[0.03, 0.28]` |
+| `MEDSAM_WH_CLIP_H` | Límites `[min, max]` para recorte de h_rel (lista JSON) | `[0.025, 0.18]` |
+
+#### BoxRefiner
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `MEDSAM_BOX_REFINER_SIZE` | Resolución del crop de entrada al refinador (píxeles) | `192` |
+| `MEDSAM_BOX_REFINER_BLEND` | Factor de mezcla al aplicar los deltas del refinador | `0.80` |
+| `MEDSAM_BOX_REFINER_MAX_ABS_DXY` | Saturación tanh para desplazamientos dx, dy | `0.45` |
+| `MEDSAM_BOX_REFINER_MAX_ABS_LOG_SCALE` | Saturación tanh para escala logarítmica dw, dh | `0.45` |
+| `MEDSAM_BOX_REFINER_CONTEXT_FRAC` | Fracción de contexto extra en el crop de refinamiento | `0.85` |
+| `MEDSAM_N_SERVICE_CLASSES` | Clases totales del contrato del servicio (bg + C1..C7 + T1..T12 + L1..L5) | `23` |
+
+**Ejemplo:** ajustar agresividad del BoxRefiner:
+```bash
+MEDSAM_BOX_REFINER_BLEND=0.50
+MEDSAM_BOX_REFINER_CONTEXT_FRAC=1.0
+```
+
+---
+
+### Hiperparámetros UNet++ (configurables sin recompilar)
+
+Los valores siguientes corresponden a los **hiperparámetros ganadores** del barrido documentado en `notebooks/unet++/Unet++_patches.ipynb` (celdas 30–32, Dice test 0.4711). Solo es necesario declararlos en `.env` o como variable de entorno si se quiere experimentar con valores distintos; de lo contrario se aplican los defaults de `config.py`.
+
+| Variable | Descripción | Default (ganador) |
+|----------|-------------|-------------------|
+| `UNETPP_ENCODER_NAME` | Encoder backbone de la arquitectura UNet++ | `efficientnet-b7` |
+| `UNETPP_IN_CHANNELS` | Canales de entrada (3 = RGB) | `3` |
+| `UNETPP_NUM_MODEL_CLASSES` | Clases que emite el modelo (bg + T1..T12 + L1..L5) | `18` |
+| `UNETPP_PATCH_SIZE` | Resolución a la que se redimensiona cada parche antes de inferencia | `128` |
+| `UNETPP_MEAN` | Media de normalización ImageNet (lista JSON) | `[0.485, 0.456, 0.406]` |
+| `UNETPP_STD` | Desviación estándar de normalización ImageNet (lista JSON) | `[0.229, 0.224, 0.225]` |
+| `UNETPP_CLAHE_CLIP` | `clipLimit` del preprocesado CLAHE | `2.0` |
+| `UNETPP_CLAHE_TILE` | `tileGridSize` del preprocesado CLAHE (lista JSON `[h, w]`) | `[8, 8]` |
+| `UNETPP_PATCH_AREA` | Fracción del área total de la imagen que define el tamaño de la ventana deslizante | `0.5` |
+| `UNETPP_SIGMA` | Sigma de la ventana gaussiana de fusión de parches | `50.0` |
+| `UNETPP_STRIDE_RATIO` | Divisor del tamaño de parche para calcular el stride (`stride = patch / ratio`) | `4` |
+| `UNETPP_N_SERVICE_CLASSES` | Clases totales del contrato del servicio (C1-C7 + T1-T12 + L1-L5 + bg) | `23` |
+| `UNETPP_FIRST_VERTEBRA_ID` | ID de servicio de T1 (primera vértebra que predice el modelo) | `6` |
+| `UNETPP_LAST_VERTEBRA_ID` | ID de servicio de L5 (última vértebra que predice el modelo) | `22` |
+
+**Ejemplo:** experimentar con ventana más pequeña y mayor stride:
+```bash
+# .env o export
+UNETPP_PATCH_AREA=0.3
+UNETPP_STRIDE_RATIO=6
+UNETPP_SIGMA=30.0
+```
 
 ### Seguridad y acceso
 
