@@ -27,7 +27,7 @@ async def get_xray_export(
     xray_id: str,
     format: ExportFormat,
     use_case: ExportResultUseCase = Depends(get_export_use_case),
-    current_user: AuthUser | None = Depends(get_current_user),
+    _: AuthUser = Depends(get_current_user),
 ) -> Response:
     try:
         data, media_type = await use_case.execute(xray_id, format.value)

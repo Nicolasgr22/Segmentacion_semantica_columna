@@ -494,7 +494,7 @@ function ErrorScreen({ error, onRetry }) {
 }
 
 // ───────────────────────── Vista de resultados ─────────────────────────
-function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
+function ResultView({ result, fileUrl, filename, onNew, onCompare, authToken }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [hoveredId, setHoveredId] = useState(null);
   // Multi-select de vértebras: Set para que React detecte cambios al hacer
@@ -608,10 +608,22 @@ function ResultView({ result, fileUrl, filename, onNew, onCompare }) {
   const clearSelection = () => setSelectedIds(new Set());
   const selectableCount = vertebrae.filter(v => v.detected && v.bounding_box).length;
 
-  // Descarga de exports vía endpoint del backend
-  const downloadExport = (format) => {
+  // Descarga de exports vía endpoint del backend con auth header
+  const downloadExport = async (format) => {
     const url = `${API_BASE}/xrays/${study_id}/exports/${format}`;
-    window.open(url, '_blank');
+    try {
+      const res = await fetch(url, {
+        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {},
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${study_id}_${format}`;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {}
   };
 
   // Formatear timestamp
@@ -1501,6 +1513,7 @@ function App() {
             filename={filename}
             onNew={reset}
             onCompare={enterCompare}
+            authToken={authToken}
           />
         )}
         {phase === 'compare' && result && (

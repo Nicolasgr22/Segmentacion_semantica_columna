@@ -11,7 +11,7 @@
 
 Microservicio de segmentación automática de columna vertebral en radiografías, desarrollado como parte del proyecto de grado de la **Maestría en Inteligencia Artificial (MaIA)** — Universidad de los Andes, 2026.
 
-Expone tres modelos de segmentación detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). El **pipeline ganador** (`VertebraPrompt-Net + BoxRefiner + MedSAM`, notebook 06) se carga como modelo por defecto. Detecta y segmenta hasta **22 vértebras** (C3-C7, T1-T12, L1-L5) en radiografías AP en formato PNG o JPEG.
+Expone tres modelos de segmentación detrás de una API REST en FastAPI con arquitectura hexagonal (Ports & Adapters). El **pipeline ganador** (`VertebraPrompt-Net + BoxRefiner + MedSAM`, notebook 06) se carga como modelo por defecto. Detecta y segmenta hasta **17 vértebras** (T1-T12, L1-L5) en radiografías AP en formato PNG o JPEG.
 
 ---
 
@@ -329,7 +329,7 @@ curl -X POST http://localhost:8000/api/vertebraai/xrays \
 | `GET` | `/api/vertebraai/health` | — | Estado del servicio y modelo |
 | `GET` | `/api/vertebraai/models` | — | Catálogo de modelos con métricas |
 | `GET` | `/api/vertebraai/models/{model_id}` | — | Detalle de un Model Card |
-| `GET` | `/api/vertebraai/xrays/{id}/exports/{format}` | — | Exportar resultado |
+| `GET` | `/api/vertebraai/xrays/{id}/exports/{format}` | 🔒 | Exportar resultado |
 
 **Formatos de exportación** (`format`): `png` · `mask` · `overlay` · `report`
 
