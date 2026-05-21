@@ -33,7 +33,7 @@ output "iam_role_arn" {
   value       = data.aws_iam_role.maia_role.arn
 }
 
-# ── Servicio EC2 Spot ────────────────────────────────────────────────────────
+# ── Servicio EC2 On-Demand ────────────────────────────────────────────────────
 
 output "ecr_repository_url" {
   description = "URL del repositorio ECR donde publicar la imagen del servicio"
@@ -46,12 +46,12 @@ output "ecr_registry" {
 }
 
 output "service_instance_id" {
-  description = "ID de la instancia Spot que corre el servicio"
+  description = "ID de la instancia On-Demand que corre el servicio"
   value       = aws_instance.svc.id
 }
 
 output "service_public_ip" {
-  description = "IP pública de la instancia Spot. Cambia si el spot se reclama."
+  description = "IP pública de la instancia On-Demand. Cambia si la instancia se para o recrea."
   value       = aws_instance.svc.public_ip
 }
 
