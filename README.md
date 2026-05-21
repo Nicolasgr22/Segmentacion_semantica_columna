@@ -45,11 +45,11 @@ Sistema de segmentación semántica de columna vertebral en radiografías que de
 > [!IMPORTANT]
 > **Carpetas obligatorias para la entrega del proyecto:**
 >
-> | Carpeta | Ubicación | Contenido esperado |
-> |---------|----------|--------------------|
+> | Carpeta | Ubicación | Contenido |
+> |---------|----------|-----------|
 > | `Notebooks/` | [`notebooks/`](notebooks/) — en este repositorio | Cuadernos con análisis, entrenamiento y pruebas |
-> | `Modelos/` | `s3://maia-proyecto-final-models/models/` — **no se encuentra en el repositorio git por restricciones de tamaño** | Archivo(s) del modelo final guardado (`.pt`) |
-> | `Datos/` | [`data/`](data/) — en este repositorio | Muestras o estructura de los datos usados |
+> | `Modelos/` | `s3://maia-proyecto-final-models/models/` — **no se incluye en el repositorio git por restricciones de tamaño** | Checkpoints del modelo final (`.pt`, `.pth`): VertebraPrompt-Net, BoxRefiner, MedSAM ViT-B fine-tuned, UNet++ EfficientNet-B7 |
+> | `Datos/` | **No se entregan por confidencialidad de los datos** | Dataset `MaIA_Scoliosis_Dataset`: ~250 radiografías AP (JPEG/PNG escala de grises), máscaras multiclase uint16 (18 clases: bg + T1–T12 + L1–L5), métricas clínicas (ángulo de Cobb en JSON). Split estratificado 70/15/15 por tipo (normal/escoliosis) y severidad. Imágenes preprocesadas a 1024×1024 RGB con letterbox LANCZOS4; máscaras con interpolación NEAREST. |
 >
 > Para descargar los modelos: `aws s3 cp s3://maia-proyecto-final-models/models/ ./models/ --recursive --profile vertebraai-models`
 > (credenciales de solo lectura disponibles en la sección [Credenciales de ejemplo](#credenciales-de-ejemplo))
